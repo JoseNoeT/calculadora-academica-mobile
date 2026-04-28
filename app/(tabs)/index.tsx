@@ -1,10 +1,13 @@
+import { type Href, useRouter } from "expo-router";
 import { StyleSheet, View } from "react-native";
 
 import { AppButton, AppCard, AppScreen, AppText } from "@/src/components/ui";
 import { spacing, useAppTheme } from "@/src/theme";
 
 export default function HomeScreen() {
+  const router = useRouter();
   const { theme } = useAppTheme();
+  const quickCalculatorRoute: Href = "/calculator/quick" as Href;
 
   return (
     <AppScreen scrollable>
@@ -23,9 +26,7 @@ export default function HomeScreen() {
           title="Mantén el control"
           style={{ backgroundColor: theme.surfaceElevated }}
         >
-          <AppText>
-            Controla tu avance antes de que sea tarde.
-          </AppText>
+          <AppText>Controla tu avance antes de que sea tarde.</AppText>
         </AppCard>
 
         <AppCard title="Acciones rápidas" subtitle="Próximamente disponibles">
@@ -35,6 +36,7 @@ export default function HomeScreen() {
                 label="Calcular rápido"
                 variant="secondary"
                 style={styles.actionButton}
+                onPress={() => router.push(quickCalculatorRoute)}
               />
               <AppButton
                 label="Mis ramos"
@@ -57,7 +59,10 @@ export default function HomeScreen() {
           </View>
         </AppCard>
 
-        <AppCard title="Estado inicial" subtitle="Comienza en menos de un minuto">
+        <AppCard
+          title="Estado inicial"
+          subtitle="Comienza en menos de un minuto"
+        >
           <AppText>Sin ramos registrados todavía.</AppText>
           <AppText tone="secondary">
             Agrega tu primer ramo para comenzar a controlar tus notas.
