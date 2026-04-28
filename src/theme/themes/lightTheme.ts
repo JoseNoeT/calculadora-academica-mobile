@@ -1,6 +1,7 @@
 import { academicStatusColors, lightColors } from "../tokens/colors";
+import type { AppTheme } from "./theme.types";
 
-export const lightTheme = {
+export const lightTheme: AppTheme = {
   mode: "light",
   ...lightColors,
   academic: {
@@ -11,4 +12,4 @@ export const lightTheme = {
     notAchievable: academicStatusColors.notAchievable.light,
     failed: academicStatusColors.failed.light,
   },
-} as const;
+};

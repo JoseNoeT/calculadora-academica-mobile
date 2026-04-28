@@ -3,10 +3,9 @@ import { useColorScheme } from "react-native";
 
 import { darkTheme } from "./themes/darkTheme";
 import { lightTheme } from "./themes/lightTheme";
+import type { AppTheme } from "./themes/theme.types";
 
 export type ThemeName = "light" | "dark" | "system";
-
-export type AppTheme = typeof lightTheme;
 
 type ThemeContextValue = {
   theme: AppTheme;
@@ -33,7 +32,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         : "light"
       : themeName;
 
-  const theme = resolvedMode === "dark" ? darkTheme : lightTheme;
+  const theme: AppTheme = resolvedMode === "dark" ? darkTheme : lightTheme;
 
   const value = useMemo(
     () => ({
