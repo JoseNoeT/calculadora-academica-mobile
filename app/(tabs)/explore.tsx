@@ -1,10 +1,13 @@
+import { type Href, useRouter } from "expo-router";
 import { StyleSheet, View } from "react-native";
 
 import { AppButton, AppCard, AppScreen, AppText } from "@/src/components/ui";
 import { spacing, useAppTheme } from "@/src/theme";
 
 export default function SubjectsShellScreen() {
+  const router = useRouter();
   const { theme } = useAppTheme();
+  const createSubjectRoute: Href = "/subjects/create" as Href;
 
   return (
     <AppScreen scrollable>
@@ -27,9 +30,7 @@ export default function SubjectsShellScreen() {
           <AppButton
             label="Agregar primer ramo"
             style={styles.primaryAction}
-            onPress={() => {
-              // TODO: conectar con pantalla de creación de ramo cuando exista.
-            }}
+            onPress={() => router.push(createSubjectRoute)}
           />
         </AppCard>
 
