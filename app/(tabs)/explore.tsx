@@ -1,6 +1,6 @@
 import { StyleSheet, View } from "react-native";
 
-import { AppCard, AppScreen, AppText, EmptyState } from "@/src/components/ui";
+import { AppButton, AppCard, AppScreen, AppText } from "@/src/components/ui";
 import { spacing, useAppTheme } from "@/src/theme";
 
 export default function SubjectsShellScreen() {
@@ -16,24 +16,42 @@ export default function SubjectsShellScreen() {
           </AppText>
         </View>
 
-        <AppCard style={{ backgroundColor: theme.surfaceElevated }}>
-          <EmptyState
-            title="Aún no tienes ramos registrados."
-            description="Cuando agregues un ramo, podrás ver su promedio actual, ponderación rendida, nota necesaria y estado académico."
-            actionLabel="Agregar primer ramo"
-            onAction={() => {
-              // TODO: conectar con flujo real de creación cuando exista la pantalla.
+        <AppCard
+          title="Aún no tienes ramos registrados."
+          style={{ backgroundColor: theme.surfaceElevated }}
+        >
+          <AppText tone="secondary">
+            Crea tu primer ramo para guardar evaluaciones, ponderaciones, notas
+            pendientes y calcular tu estado académico durante el semestre.
+          </AppText>
+          <AppButton
+            label="Agregar primer ramo"
+            style={styles.primaryAction}
+            onPress={() => {
+              // TODO: conectar con pantalla de creación de ramo cuando exista.
             }}
           />
         </AppCard>
 
-        <AppCard title="¿Qué podrás revisar aquí?">
+        <AppCard title="¿Qué podrás revisar por ramo?">
           <View style={styles.educationalList}>
-            <AppText>• Promedio actual</AppText>
+            <AppText>• Promedio ponderado actual</AppText>
+            <AppText>• Puntos acumulados</AppText>
+            <AppText>• Ponderación rendida y pendiente</AppText>
             <AppText>• Nota necesaria para aprobar</AppText>
-            <AppText>• Evaluaciones pendientes</AppText>
-            <AppText>• Estado académico por ramo</AppText>
+            <AppText>• Estado académico automático</AppText>
+            <AppText>• Evaluación pendiente más importante</AppText>
           </View>
+        </AppCard>
+
+        <AppCard
+          title="Siguiente mejora"
+          style={{ backgroundColor: theme.surfaceElevated }}
+        >
+          <AppText tone="secondary">
+            Pronto podrás crear ramos, agregar evaluaciones y guardar tu avance
+            localmente en el dispositivo.
+          </AppText>
         </AppCard>
       </View>
     </AppScreen>
@@ -51,5 +69,9 @@ const styles = StyleSheet.create({
   },
   educationalList: {
     gap: spacing.sm,
+  },
+  primaryAction: {
+    marginTop: spacing.md,
+    minHeight: 48,
   },
 });
