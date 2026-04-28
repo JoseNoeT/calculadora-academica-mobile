@@ -1,22 +1,55 @@
-import type { Subject } from "../../../domain/entities";
-import { DEFAULT_PASSING_GRADE } from "../../../domain/rules";
-import { validateSubjectName } from "../../../domain/validators";
-import type { CreateSubjectInput } from "../types/subject.types";
+import { MAX_GRADE, MIN_GRADE } from "../../../domain/rules";
+import {
+    validatePassingGrade,
+    validateSubjectName,
+} from "../../../domain/validators";
+import {
+    getInMemorySubjects,
+    saveInMemorySubject,
+} from "../repositories/subjectRepository";
+import type {
+    CreateSubjectInput,
+    SubjectListItem,
+} from "../types/subject.types";
 
-export function createSubjectDraft(input: CreateSubjectInput): Subject {
+function createSubjectId(): string {
+  return `subject-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export async function getSubjects(): Promise<SubjectListItem[]> {
+  return getInMemorySubjects();
+}
+
+export async function createSubject(
+  input: CreateSubjectInput,
+): Promise<SubjectListItem> {
+  const name = input.name.trim();
+  const nameValidation = validateSubjectName(name);
+  const minimumGradeValidation = validatePassingGrade(input.minimumGrade);
+
+  if (!nameValidation.isValid) {
+    throw new Error("El nombre del ramo no puede estar vacío.");
+  }
+
+  if (!minimumGradeValidation.isValid) {
+    throw new Error(
+      `La nota mínima debe estar entre ${MIN_GRADE} y ${MAX_GRADE}.`,
+    );
+  }
+
   const now = new Date().toISOString();
-
-  return {
-    id: "",
-    name: input.name.trim(),
-    code: input.code?.trim() || undefined,
-    professorName: input.professorName?.trim() || undefined,
-    semester: input.semester?.trim() || undefined,
-    passingGrade: DEFAULT_PASSING_GRADE,
-    accumulatedWeight: 0,
+  const subject: SubjectListItem = {
+    id: createSubjectId(),
+    name,
+    minimumGrade: input.minimumGrade,
+    color: input.color,
     createdAt: now,
     updatedAt: now,
   };
+
+  await saveInMemorySubject(subject);
+
+  return subject;
 }
 
 export function validateSubjectDraft(input: CreateSubjectInput) {

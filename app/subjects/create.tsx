@@ -9,6 +9,8 @@ import {
     AppScreen,
     AppText,
 } from "@/src/components/ui";
+import { MAX_GRADE, MIN_GRADE } from "@/src/domain/rules";
+import { createSubject } from "@/src/features/subjects/services/subjectService";
 import { spacing, useAppTheme } from "@/src/theme";
 
 type SubjectColorOption = {
@@ -33,10 +35,62 @@ export default function CreateSubjectScreen() {
   const [passingGrade, setPassingGrade] = useState("4.0");
   const [selectedColorId, setSelectedColorId] = useState("blue");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | undefined>(undefined);
+  const [passingGradeError, setPassingGradeError] = useState<
+    string | undefined
+  >(undefined);
 
-  const handleSave = () => {
-    // TODO: conectar guardado real cuando exista persistencia local en una fase posterior.
-    setSaveMessage("La persistencia se agregará en la siguiente fase.");
+  const selectedColor =
+    COLOR_OPTIONS.find((option) => option.id === selectedColorId) ??
+    COLOR_OPTIONS[0];
+
+  const handleSave = async () => {
+    const normalizedName = subjectName.trim();
+    const parsedMinimumGrade = Number(passingGrade.replace(",", ".").trim());
+
+    let hasError = false;
+
+    if (!normalizedName) {
+      setNameError("El nombre del ramo es obligatorio.");
+      hasError = true;
+    } else {
+      setNameError(undefined);
+    }
+
+    if (
+      Number.isNaN(parsedMinimumGrade) ||
+      parsedMinimumGrade < MIN_GRADE ||
+      parsedMinimumGrade > MAX_GRADE
+    ) {
+      setPassingGradeError(
+        `La nota mínima debe estar entre ${MIN_GRADE} y ${MAX_GRADE}.`,
+      );
+      hasError = true;
+    } else {
+      setPassingGradeError(undefined);
+    }
+
+    if (hasError) {
+      setSaveMessage(null);
+      return;
+    }
+
+    try {
+      await createSubject({
+        name: normalizedName,
+        minimumGrade: parsedMinimumGrade,
+        color: selectedColor.value,
+      });
+
+      setSaveMessage("Ramo creado en memoria para esta sesión.");
+      router.back();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "No se pudo crear el ramo en esta fase.";
+      setSaveMessage(errorMessage);
+    }
   };
 
   return (
@@ -56,6 +110,7 @@ export default function CreateSubjectScreen() {
             value={subjectName}
             onChangeText={setSubjectName}
             placeholder="Ej: Matemáticas I"
+            error={nameError}
           />
 
           <AppInput
@@ -64,6 +119,7 @@ export default function CreateSubjectScreen() {
             onChangeText={setPassingGrade}
             placeholder="4.0"
             keyboardType="decimal-pad"
+            error={passingGradeError}
           />
 
           <View style={styles.colorSection}>

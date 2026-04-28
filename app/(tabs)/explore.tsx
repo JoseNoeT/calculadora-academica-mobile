@@ -1,13 +1,29 @@
+import { useFocusEffect } from "@react-navigation/native";
 import { type Href, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { AppButton, AppCard, AppScreen, AppText } from "@/src/components/ui";
+import { getSubjects } from "@/src/features/subjects/services/subjectService";
+import type { SubjectListItem } from "@/src/features/subjects/types/subject.types";
 import { spacing, useAppTheme } from "@/src/theme";
 
 export default function SubjectsShellScreen() {
   const router = useRouter();
   const { theme } = useAppTheme();
   const createSubjectRoute: Href = "/subjects/create" as Href;
+  const [subjects, setSubjects] = useState<SubjectListItem[]>([]);
+
+  const loadSubjects = useCallback(async () => {
+    const items = await getSubjects();
+    setSubjects(items);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadSubjects();
+    }, [loadSubjects]),
+  );
 
   return (
     <AppScreen scrollable>
@@ -19,20 +35,55 @@ export default function SubjectsShellScreen() {
           </AppText>
         </View>
 
-        <AppCard
-          title="Aún no tienes ramos registrados."
-          style={{ backgroundColor: theme.surfaceElevated }}
-        >
-          <AppText tone="secondary">
-            Crea tu primer ramo para guardar evaluaciones, ponderaciones, notas
-            pendientes y calcular tu estado académico durante el semestre.
-          </AppText>
-          <AppButton
-            label="Agregar primer ramo"
-            style={styles.primaryAction}
-            onPress={() => router.push(createSubjectRoute)}
-          />
-        </AppCard>
+        {subjects.length === 0 ? (
+          <AppCard
+            title="Aún no tienes ramos registrados."
+            style={{ backgroundColor: theme.surfaceElevated }}
+          >
+            <AppText tone="secondary">
+              Crea tu primer ramo para guardar evaluaciones, ponderaciones,
+              notas pendientes y calcular tu estado académico durante el
+              semestre.
+            </AppText>
+            <AppButton
+              label="Agregar primer ramo"
+              style={styles.primaryAction}
+              onPress={() => router.push(createSubjectRoute)}
+            />
+          </AppCard>
+        ) : (
+          <View style={styles.subjectsList}>
+            <AppCard title="Tus ramos" subtitle="Datos locales de esta sesión">
+              <AppButton
+                label="Agregar ramo"
+                variant="outline"
+                style={styles.primaryAction}
+                onPress={() => router.push(createSubjectRoute)}
+              />
+            </AppCard>
+
+            {subjects.map((subject) => (
+              <AppCard key={subject.id}>
+                <View style={styles.subjectHeader}>
+                  <AppText variant="subtitle">{subject.name}</AppText>
+                  <View
+                    style={[
+                      styles.subjectColorDot,
+                      {
+                        backgroundColor: subject.color,
+                        borderColor: theme.border,
+                      },
+                    ]}
+                  />
+                </View>
+                <AppText tone="secondary">
+                  Nota mínima: {subject.minimumGrade.toFixed(1)}
+                </AppText>
+                <AppText tone="secondary">Sin evaluaciones todavía</AppText>
+              </AppCard>
+            ))}
+          </View>
+        )}
 
         <AppCard title="¿Qué podrás revisar por ramo?">
           <View style={styles.educationalList}>
@@ -70,6 +121,20 @@ const styles = StyleSheet.create({
   },
   educationalList: {
     gap: spacing.sm,
+  },
+  subjectsList: {
+    gap: spacing.md,
+  },
+  subjectHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  subjectColorDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 999,
+    borderWidth: 1,
   },
   primaryAction: {
     marginTop: spacing.md,
