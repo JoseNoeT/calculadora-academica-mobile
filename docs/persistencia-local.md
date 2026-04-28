@@ -2,51 +2,69 @@
 
 ## Decisión de persistencia en esta fase
 
-En esta fase se implementó una estrategia **temporal en memoria** para el módulo de ramos.
+Se reemplazó la estrategia temporal en memoria por persistencia local real con SQLite usando `expo-sqlite`.
 
-Motivo:
+Base local:
 
-- El proyecto no tiene instalada una dependencia de persistencia local (`expo-sqlite` o `@react-native-async-storage/async-storage`).
-- Se evitó instalar dependencias sin autorización para respetar el alcance actual.
+- `academic_calculator.db`
 
 ## Qué se implementó
 
-- Flujo de creación de ramo desde `app/subjects/create.tsx`.
-- Validaciones básicas en formulario:
-  - nombre obligatorio
-  - nota mínima entre 2.0 y 7.0
-- Servicio de ramos en `src/features/subjects/services/subjectService.ts` con:
+- Cliente SQLite en `src/storage/database/sqliteClient.ts`.
+- Inicialización de esquema en `src/storage/database/migrations.ts`.
+- Tabla `subjects` con estructura:
+  - `id TEXT PRIMARY KEY NOT NULL`
+  - `name TEXT NOT NULL`
+  - `minimum_grade REAL NOT NULL`
+  - `color TEXT`
+  - `created_at TEXT NOT NULL`
+  - `updated_at TEXT NOT NULL`
+- Repositorio SQLite para ramos en `src/storage/repositories/subjectRepository.ts` con:
+  - `getAllSubjects()`
+  - `getSubjectById(id)`
+  - `createSubject(input)`
+  - `updateSubject(id, input)` (preparado)
+  - `deleteSubject(id)` (preparado)
+- Integración en feature de ramos:
   - `getSubjects()`
   - `createSubject(input)`
-- Repositorio temporal en memoria en `src/features/subjects/repositories/subjectRepository.ts`.
-- Listado de ramos en `app/(tabs)/explore.tsx`.
+- Flujo UI conectado:
+  - `app/subjects/create.tsx` guarda ramos localmente.
+  - `app/(tabs)/explore.tsx` lista ramos persistidos y refresca al volver.
+
+## Qué datos persisten actualmente
+
+- ID del ramo
+- Nombre del ramo
+- Nota mínima de aprobación
+- Color identificador
+- Fecha de creación
+- Fecha de actualización
+
+Estos datos se mantienen al cerrar y volver a abrir la app.
 
 ## Qué queda pendiente
 
-- Persistencia real en almacenamiento local del dispositivo.
-- Mantener datos al cerrar y volver a abrir la app.
-- Gestión de evaluación por ramo (crear, editar, eliminar).
+- Evaluaciones por ramo
+- Edición de ramos
+- Eliminación de ramos
+- Pantalla de detalle de ramo
 
-## Limitación actual (importante)
+## Por qué no se guardan resúmenes calculados
 
-La implementación actual **no persiste entre cierres de app**. Los ramos se mantienen solo durante la sesión activa.
+No se persisten resúmenes académicos (promedio, nota necesaria, estado) porque son datos derivados.
+Se calcularán dinámicamente desde las evaluaciones para evitar inconsistencias y duplicación de estado.
 
-## Recomendación técnica para siguiente fase
+## Riesgos y mitigaciones
 
-Implementar persistencia definitiva con `expo-sqlite` para almacenar:
-
-- ramos
-- evaluaciones
-- configuración académica por asignatura
-
-Alternativa de transición: `@react-native-async-storage/async-storage` para almacenamiento simple, aunque para el modelo académico completo SQLite es más apropiado.
+- Riesgo: cambios de esquema futuros rompan datos.
+  Mitigación: centralizar migraciones versionadas en `migrations.ts`.
+- Riesgo: consultas mal parametrizadas.
+  Mitigación: uso de placeholders `?` en todas las consultas con datos de usuario.
+- Riesgo: acoplamiento entre UI y storage.
+  Mitigación: acceso a SQLite encapsulado en repositorios y servicios.
 
 ## Por qué no usamos backend en el MVP
 
-El MVP está definido como **offline-first**, por lo que prioriza funcionamiento local sin internet y menor complejidad operativa inicial.
-
-Esto permite:
-
-- validar experiencia y lógica de negocio rápido
-- reducir costos y dependencias de infraestructura
-- evolucionar a sincronización remota en fases posteriores sin bloquear el avance del producto
+El MVP es offline-first y prioriza disponibilidad local sin internet.
+Esto reduce complejidad inicial, acelera validación del producto y permite evolucionar a sincronización remota en fases posteriores.

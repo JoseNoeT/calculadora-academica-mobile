@@ -4,8 +4,8 @@ import {
     validateSubjectName,
 } from "../../../domain/validators";
 import {
-    getInMemorySubjects,
-    saveInMemorySubject,
+    getPersistedSubjects,
+    savePersistedSubject,
 } from "../repositories/subjectRepository";
 import type {
     CreateSubjectInput,
@@ -17,7 +17,7 @@ function createSubjectId(): string {
 }
 
 export async function getSubjects(): Promise<SubjectListItem[]> {
-  return getInMemorySubjects();
+  return getPersistedSubjects();
 }
 
 export async function createSubject(
@@ -47,7 +47,7 @@ export async function createSubject(
     updatedAt: now,
   };
 
-  await saveInMemorySubject(subject);
+  await savePersistedSubject(subject);
 
   return subject;
 }

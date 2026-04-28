@@ -53,7 +53,10 @@ export default function SubjectsShellScreen() {
           </AppCard>
         ) : (
           <View style={styles.subjectsList}>
-            <AppCard title="Tus ramos" subtitle="Datos locales de esta sesión">
+            <AppCard
+              title="Tus ramos"
+              subtitle="Guardados localmente en este dispositivo"
+            >
               <AppButton
                 label="Agregar ramo"
                 variant="outline"

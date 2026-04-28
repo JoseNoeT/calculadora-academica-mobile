@@ -1,28 +1,15 @@
+import {
+    createSubject as createStoredSubject,
+    getAllSubjects as getStoredSubjects,
+} from "../../../storage/repositories/subjectRepository";
 import type { SubjectListItem } from "../types/subject.types";
 
-const inMemorySubjects: SubjectListItem[] = [];
-
-export async function getInMemorySubjects(): Promise<SubjectListItem[]> {
-  return [...inMemorySubjects].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
+export async function getPersistedSubjects(): Promise<SubjectListItem[]> {
+  return getStoredSubjects();
 }
 
-export async function saveInMemorySubject(
+export async function savePersistedSubject(
   subject: SubjectListItem,
 ): Promise<void> {
-  const existingIndex = inMemorySubjects.findIndex(
-    (item) => item.id === subject.id,
-  );
-
-  if (existingIndex >= 0) {
-    inMemorySubjects[existingIndex] = subject;
-    return;
-  }
-
-  inMemorySubjects.push(subject);
-}
-
-export async function clearInMemorySubjects(): Promise<void> {
-  inMemorySubjects.length = 0;
+  await createStoredSubject(subject);
 }

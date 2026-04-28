@@ -82,13 +82,13 @@ export default function CreateSubjectScreen() {
         color: selectedColor.value,
       });
 
-      setSaveMessage("Ramo creado en memoria para esta sesión.");
+      setSaveMessage("Ramo guardado localmente en el dispositivo.");
       router.back();
     } catch (error) {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "No se pudo crear el ramo en esta fase.";
+          : "No se pudo guardar el ramo localmente.";
       setSaveMessage(errorMessage);
     }
   };
