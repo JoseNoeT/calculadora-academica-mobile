@@ -26,8 +26,11 @@ type QuickEvaluationForm = {
 };
 
 const INITIAL_EVALUATIONS: QuickEvaluationForm[] = [
-  { id: "evaluation-1", name: "Evaluación 1", grade: "", weight: "" },
-  { id: "evaluation-2", name: "Evaluación 2", grade: "", weight: "" },
+  { id: "evaluation-1", name: "Prueba n°1", grade: "", weight: "32" },
+  { id: "evaluation-2", name: "Prueba n°2", grade: "", weight: "12" },
+  { id: "evaluation-3", name: "Prueba n°3", grade: "", weight: "32" },
+  { id: "evaluation-4", name: "Prueba n°4", grade: "", weight: "12" },
+  { id: "evaluation-5", name: "Prueba n°5", grade: "", weight: "12" },
 ];
 
 function normalizeNumberInput(value: string): string {
@@ -60,7 +63,7 @@ function createEvaluationPayload(
   return {
     id: form.id,
     subjectId,
-    name: form.name.trim() || "Evaluación",
+    name: form.name.trim() || "Evaluacion",
     grade: parsedGrade,
     weight: parsedWeight ?? 0,
     minimumGrade,
@@ -80,6 +83,14 @@ function formatGrade(value: number | null | undefined): string {
 
 function formatPercent(value: number): string {
   return `${value.toFixed(0)}%`;
+}
+
+function formatSummaryGrade(value: number | null | undefined): string {
+  if (typeof value !== "number") {
+    return "Pendiente";
+  }
+
+  return value.toFixed(2);
 }
 
 export default function QuickCalculatorScreen() {
@@ -137,7 +148,29 @@ export default function QuickCalculatorScreen() {
     [evaluationPayload],
   );
 
-  const weightWarning = totalWeight !== 100;
+  const hasCompleteWeight = Math.abs(totalWeight - 100) < 0.0001;
+  const weightWarning = !hasCompleteWeight;
+
+  const displayRequiredGrade = hasCompleteWeight
+    ? summary.requiredGrade == null
+      ? "—"
+      : summary.requiredGrade.toFixed(2)
+    : "Revisar ponderaciones";
+
+  const displayFinalProjectedGrade = hasCompleteWeight
+    ? formatSummaryGrade(summary.finalGrade)
+    : "Revisar ponderaciones";
+
+  const displayStatusLabel = hasCompleteWeight
+    ? academicStatusLabels[summary.status]
+    : "Pendiente";
+
+  const displayAdvice = hasCompleteWeight
+    ? (summary.advice ?? "Sin consejo disponible.")
+    : "Completa las ponderaciones hasta llegar a 100% para obtener un cálculo confiable.";
+
+  const completedProgress = Math.max(0, Math.min(100, summary.completedWeight));
+  const pendingProgress = Math.max(0, Math.min(100, summary.pendingWeight));
 
   const updateEvaluation = (
     id: string,
@@ -156,7 +189,7 @@ export default function QuickCalculatorScreen() {
       ...current,
       {
         id: `evaluation-${Date.now()}`,
-        name: `Evaluación ${current.length + 1}`,
+        name: `Evaluacion ${current.length + 1}`,
         grade: "",
         weight: "",
       },
@@ -236,7 +269,11 @@ export default function QuickCalculatorScreen() {
               return (
                 <View key={evaluation.id} style={styles.evaluationCardShell}>
                   <View style={styles.evaluationHeader}>
-                    <AppText variant="subtitle">Evaluación {index + 1}</AppText>
+                    <View style={styles.evaluationTag}>
+                      <AppText variant="caption" tone="secondary">
+                        #{index + 1}
+                      </AppText>
+                    </View>
                     <AppButton
                       label="Eliminar"
                       variant="ghost"
@@ -250,7 +287,7 @@ export default function QuickCalculatorScreen() {
                     onChangeText={(value) =>
                       updateEvaluation(evaluation.id, "name", value)
                     }
-                    placeholder={`Evaluación ${index + 1}`}
+                    placeholder={`Evaluacion ${index + 1}`}
                   />
 
                   <View style={styles.inlineFields}>
@@ -260,7 +297,7 @@ export default function QuickCalculatorScreen() {
                       onChangeText={(value) =>
                         updateEvaluation(evaluation.id, "grade", value)
                       }
-                      placeholder="Pendiente"
+                      placeholder=""
                       keyboardType="decimal-pad"
                       error={gradeError}
                       containerStyle={styles.inlineField}
@@ -291,19 +328,41 @@ export default function QuickCalculatorScreen() {
 
           {weightWarning ? (
             <AppText tone="warning" style={styles.warningText}>
-              Advertencia: la suma de ponderaciones es {totalWeight.toFixed(0)}
-              %. Idealmente debe ser 100%.
+              La suma de ponderaciones es {totalWeight.toFixed(0)}%. Para
+              calcular la nota necesaria, debe ser 100%.
             </AppText>
           ) : null}
         </AppCard>
 
+        <AppCard
+          title="Suma de ponderaciones"
+          style={{ backgroundColor: theme.surfaceElevated }}
+        >
+          <AppText variant="subtitle">
+            Total actual: {formatPercent(totalWeight)}
+          </AppText>
+          {weightWarning ? (
+            <AppText tone="warning">
+              La suma de ponderaciones es {formatPercent(totalWeight)}. Para
+              calcular la nota necesaria, debe ser 100%.
+            </AppText>
+          ) : (
+            <AppText tone="success">
+              Perfecto: la suma de ponderaciones es 100%.
+            </AppText>
+          )}
+        </AppCard>
+
         <AppCard title="Resumen preliminar">
+          <AppText tone="secondary" style={styles.summaryHelpText}>
+            Los resultados se actualizan mientras editas tus evaluaciones.
+          </AppText>
           <View style={styles.summaryList}>
             <AppText>
               Puntos acumulados: {summary.accumulatedPoints.toFixed(2)}
             </AppText>
             <AppText>
-              Promedio actual: {formatGrade(summary.currentAverage)}
+              Promedio ponderado actual: {formatGrade(summary.currentAverage)}
             </AppText>
             <AppText>
               Ponderación rendida: {formatPercent(summary.completedWeight)}
@@ -312,15 +371,61 @@ export default function QuickCalculatorScreen() {
               Ponderación pendiente: {formatPercent(summary.pendingWeight)}
             </AppText>
             <AppText>
-              Nota necesaria:{" "}
-              {summary.requiredGrade == null
-                ? "—"
-                : summary.requiredGrade.toFixed(2)}
+              Nota final proyectada: {displayFinalProjectedGrade}
             </AppText>
-            <AppText>Estado: {academicStatusLabels[summary.status]}</AppText>
-            <AppText tone="secondary">
-              Consejo: {summary.advice ?? "Sin consejo disponible."}
+            <AppText>Nota necesaria: {displayRequiredGrade}</AppText>
+            <AppText>Estado: {displayStatusLabel}</AppText>
+          </View>
+
+          <View style={styles.progressSection}>
+            <AppText variant="caption" tone="secondary">
+              Progreso por ponderación
             </AppText>
+            <View style={styles.progressRow}>
+              <AppText variant="caption">Rendida</AppText>
+              <View
+                style={[
+                  styles.progressTrack,
+                  { backgroundColor: theme.surfaceElevated },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${completedProgress}%`,
+                      backgroundColor: theme.success,
+                    },
+                  ]}
+                />
+              </View>
+              <AppText variant="caption" tone="secondary">
+                {formatPercent(summary.completedWeight)}
+              </AppText>
+            </View>
+
+            <View style={styles.progressRow}>
+              <AppText variant="caption">Pendiente</AppText>
+              <View
+                style={[
+                  styles.progressTrack,
+                  { backgroundColor: theme.surfaceElevated },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${pendingProgress}%`,
+                      backgroundColor: theme.warning,
+                    },
+                  ]}
+                />
+              </View>
+              <AppText variant="caption" tone="secondary">
+                {formatPercent(summary.pendingWeight)}
+              </AppText>
+            </View>
           </View>
 
           <View style={styles.actionsRow}>
@@ -332,6 +437,21 @@ export default function QuickCalculatorScreen() {
               onPress={resetCalculator}
             />
           </View>
+        </AppCard>
+
+        <AppCard
+          title="Consejo académico"
+          style={{ backgroundColor: theme.surfaceElevated }}
+        >
+          <AppText tone="secondary">{displayAdvice}</AppText>
+        </AppCard>
+
+        <AppCard title="¿Cómo se calcula?">
+          <AppText tone="secondary">
+            La nota se calcula mediante promedio ponderado. Cada evaluación
+            aporta a la nota final según su porcentaje. Las evaluaciones sin
+            nota se consideran pendientes y no se cuentan como cero.
+          </AppText>
         </AppCard>
       </View>
     </AppScreen>
@@ -352,12 +472,20 @@ const styles = StyleSheet.create({
   },
   evaluationCardShell: {
     gap: spacing.sm,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.06)",
   },
   evaluationHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+  },
+  evaluationTag: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
   inlineFields: {
     flexDirection: "row",
@@ -375,6 +503,28 @@ const styles = StyleSheet.create({
   },
   summaryList: {
     gap: spacing.xs,
+  },
+  summaryHelpText: {
+    marginBottom: spacing.sm,
+  },
+  progressSection: {
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  progressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  progressTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 999,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 999,
   },
   actionsRow: {
     flexDirection: "row",
