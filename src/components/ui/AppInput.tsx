@@ -27,10 +27,15 @@ export function AppInput({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label ? <AppText variant="caption">{label}</AppText> : null}
+      {label ? (
+        <AppText variant="label" tone="secondary">
+          {label}
+        </AppText>
+      ) : null}
       <TextInput
         {...props}
         placeholderTextColor={theme.textSecondary}
+        selectionColor={theme.primary}
         style={[
           styles.input,
           {
@@ -51,13 +56,13 @@ export function AppInput({
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   input: {
-    minHeight: 44,
+    minHeight: 50,
     borderWidth: 1,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
 });

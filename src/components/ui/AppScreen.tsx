@@ -45,6 +45,7 @@ export function AppScreen({
     <ScrollView
       style={{ backgroundColor: theme.background }}
       contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
     >
       {content}
     </ScrollView>
@@ -56,7 +57,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   padded: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxl,
   },
   scrollContent: {
     flexGrow: 1,

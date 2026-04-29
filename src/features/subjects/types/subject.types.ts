@@ -6,6 +6,12 @@ export interface CreateSubjectInput {
   color: string;
 }
 
+export interface UpdateSubjectInput {
+  name: string;
+  minimumGrade: number;
+  color: string;
+}
+
 export interface SubjectDraft extends Partial<Subject> {
   name: string;
 }

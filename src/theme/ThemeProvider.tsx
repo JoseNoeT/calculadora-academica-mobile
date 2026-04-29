@@ -1,6 +1,16 @@
-import React, { createContext, useMemo, useState } from "react";
+import React, {
+    createContext,
+    useCallback,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
 import { useColorScheme } from "react-native";
 
+import {
+    getThemePreference,
+    saveThemePreference,
+} from "../storage/settingsStorage";
 import { darkTheme } from "./themes/darkTheme";
 import { lightTheme } from "./themes/lightTheme";
 import type { AppTheme } from "./themes/theme.types";
@@ -25,6 +35,31 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const systemColorScheme = useColorScheme();
   const [themeName, setThemeName] = useState<ThemeName>("system");
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const hydrateThemePreference = async () => {
+      const storedPreference = await getThemePreference();
+
+      if (!isMounted || !storedPreference) {
+        return;
+      }
+
+      setThemeName(storedPreference);
+    };
+
+    void hydrateThemePreference();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleSetThemeName = useCallback((nextThemeName: ThemeName) => {
+    setThemeName(nextThemeName);
+    void saveThemePreference(nextThemeName);
+  }, []);
+
   const resolvedMode =
     themeName === "system"
       ? systemColorScheme === "dark"
@@ -38,9 +73,9 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     () => ({
       theme,
       themeName,
-      setThemeName,
+      setThemeName: handleSetThemeName,
     }),
-    [theme, themeName],
+    [handleSetThemeName, theme, themeName],
   );
 
   return (

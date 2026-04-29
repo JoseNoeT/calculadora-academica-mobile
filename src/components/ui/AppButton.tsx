@@ -3,10 +3,11 @@ import {
     Pressable,
     StyleSheet,
     type StyleProp,
+    type TextStyle,
     type ViewStyle,
 } from "react-native";
 
-import { radius, spacing, useAppTheme } from "../../theme";
+import { radius, shadows, spacing, useAppTheme } from "../../theme";
 import { AppText } from "./AppText";
 
 type AppButtonVariant = "primary" | "secondary" | "outline" | "ghost";
@@ -17,6 +18,7 @@ type AppButtonProps = {
   variant?: AppButtonVariant;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  labelStyle?: StyleProp<TextStyle>;
 };
 
 export function AppButton({
@@ -25,6 +27,7 @@ export function AppButton({
   variant = "primary",
   disabled = false,
   style,
+  labelStyle,
 }: AppButtonProps) {
   const { theme } = useAppTheme();
 
@@ -33,21 +36,25 @@ export function AppButton({
       backgroundColor: theme.primary,
       borderColor: theme.primary,
       textColor: theme.surface,
+      withShadow: true,
     },
     secondary: {
       backgroundColor: theme.secondary,
       borderColor: theme.secondary,
       textColor: theme.surface,
+      withShadow: true,
     },
     outline: {
       backgroundColor: "transparent",
       borderColor: theme.border,
       textColor: theme.textPrimary,
+      withShadow: false,
     },
     ghost: {
       backgroundColor: "transparent",
       borderColor: "transparent",
       textColor: theme.primary,
+      withShadow: false,
     },
   } as const;
 
@@ -62,12 +69,20 @@ export function AppButton({
         {
           backgroundColor: currentVariant.backgroundColor,
           borderColor: currentVariant.borderColor,
-          opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
+          opacity: disabled ? 0.5 : pressed ? 0.9 : 1,
+          transform: [{ scale: pressed ? 0.99 : 1 }],
         },
+        currentVariant.withShadow ? shadows.sm : null,
         style,
       ]}
     >
-      <AppText style={{ color: currentVariant.textColor, fontWeight: "600" }}>
+      <AppText
+        variant="button"
+        numberOfLines={2}
+        adjustsFontSizeToFit
+        minimumFontScale={0.82}
+        style={[{ color: currentVariant.textColor }, labelStyle]}
+      >
         {label}
       </AppText>
     </Pressable>
@@ -76,12 +91,12 @@ export function AppButton({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 44,
+    minHeight: 48,
     borderWidth: 1,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.sm,
   },
 });
