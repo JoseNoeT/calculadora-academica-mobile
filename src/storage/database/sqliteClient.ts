@@ -1,0 +1,18 @@
+import * as SQLite from "expo-sqlite";
+
+const DATABASE_NAME = "academic_calculator.db";
+
+let databasePromise: Promise<SQLite.SQLiteDatabase> | null = null;
+
+export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
+  if (!databasePromise) {
+    databasePromise = SQLite.openDatabaseAsync(DATABASE_NAME).then(
+      async (database) => {
+        await database.execAsync("PRAGMA foreign_keys = ON;");
+        return database;
+      },
+    );
+  }
+
+  return databasePromise;
+}
