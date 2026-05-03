@@ -112,23 +112,19 @@ export function calculateStatus(input: {
     return "pending";
   }
 
-  if (requiredGrade < MIN_GRADE) {
-    return "favorable";
-  }
-
-  if (requiredGrade >= MIN_GRADE && requiredGrade < 6.0) {
-    return "achievable";
-  }
-
-  if (requiredGrade >= 6.0 && requiredGrade <= MAX_GRADE) {
-    return "atRisk";
-  }
-
   if (requiredGrade > MAX_GRADE) {
     return "notAchievable";
   }
 
-  return "pending";
+  if (requiredGrade <= 4.0) {
+    return "favorable";
+  }
+
+  if (requiredGrade <= 5.0) {
+    return "achievable";
+  }
+
+  return "atRisk";
 }
 
 export function generateAcademicAdvice(input: {

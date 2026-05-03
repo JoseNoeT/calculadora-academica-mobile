@@ -4,6 +4,8 @@ import type { AppTheme } from "./theme.types";
 export const darkTheme: AppTheme = {
   mode: "dark",
   ...darkColors,
+  textMuted: "#64748B",
+  textAccent: "#3B82F6",
   academic: {
     pending: academicStatusColors.pending.dark,
     approved: academicStatusColors.approved.dark,

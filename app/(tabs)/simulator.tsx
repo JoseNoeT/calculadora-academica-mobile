@@ -16,6 +16,7 @@ import {
     AppScreen,
     AppText,
 } from "@/src/components/ui";
+import { strings } from "@/src/constants/strings";
 import { academicStatusLabels } from "@/src/domain/entities";
 import { MAX_GRADE, MIN_GRADE } from "@/src/domain/rules";
 import {
@@ -96,7 +97,13 @@ export default function SimulatorScreen() {
         Math.round(initialAveragePercent),
         Math.round(projectedAveragePercent),
       ]
-    : [12, 22, 18, 30, 26, 38];
+    : currentSummary
+      ? [
+          Math.max(8, Math.round(initialAveragePercent * 0.6)),
+          Math.max(10, Math.round(initialAveragePercent * 0.8)),
+          Math.round(initialAveragePercent),
+        ]
+      : [];
 
   const loadSubjects = useCallback(async () => {
     const items = await getSubjects();
@@ -144,20 +151,20 @@ export default function SimulatorScreen() {
     const parsedGrade = Number(rawValue);
 
     if (!rawValue) {
-      setSimulatedGradeError("La nota simulada es obligatoria.");
+      setSimulatedGradeError(strings.simulator.simulatedGradeRequired);
       setProjectedSummary(null);
       return;
     }
 
     if (Number.isNaN(parsedGrade)) {
-      setSimulatedGradeError("Ingresa una nota válida usando números.");
+      setSimulatedGradeError(strings.simulator.simulatedGradeInvalid);
       setProjectedSummary(null);
       return;
     }
 
     if (parsedGrade < MIN_GRADE || parsedGrade > MAX_GRADE) {
       setSimulatedGradeError(
-        `La nota debe estar entre ${MIN_GRADE} y ${MAX_GRADE}.`,
+        strings.simulator.gradeRangeError(MIN_GRADE, MAX_GRADE),
       );
       setProjectedSummary(null);
       return;
@@ -184,46 +191,44 @@ export default function SimulatorScreen() {
   };
 
   return (
-    <AppScreen scrollable>
+    <AppScreen scrollable stickyHeader={<AppHeader />}>
       <View style={styles.container}>
-        <AppHeader />
-
         <AppCard variant="elevated" showTopAccent>
-          <AppText variant="h3" style={{ color: theme.primary }}>
-            Escenario visual
+          <AppText variant="sectionTitle" tone="accent">
+            {strings.simulator.heroTitle}
           </AppText>
 
           <MiniTrendChart points={trendPoints} />
 
           <AnimatedProgressBar
             value={Math.round(initialAveragePercent)}
-            label="Estado inicial"
+            label={strings.simulator.initialState}
             duration={780}
             height={8}
           />
           <AnimatedProgressBar
             value={Math.round(projectedAveragePercent)}
-            label="Proyección simulada"
+            label={strings.simulator.simulatedProjection}
             duration={920}
             height={8}
           />
 
           <View style={styles.heroStatsRow}>
             <AnimatedStatCard
-              label="Estado inicial"
+              label={strings.simulator.initialState}
               value={
                 currentSummary
                   ? academicStatusLabels[currentSummary.status]
-                  : "Sin base"
+                  : strings.simulator.noBase
               }
               tone="info"
             />
             <AnimatedStatCard
-              label="Proyección"
+              label={strings.simulator.projection}
               value={
                 projectedSummary
                   ? academicStatusLabels[projectedSummary.status]
-                  : "Sin simulación"
+                  : strings.simulator.noSimulation
               }
               tone={projectedSummary ? "success" : "secondary"}
               delay={110}
@@ -232,22 +237,29 @@ export default function SimulatorScreen() {
 
           {!projectedSummary ? (
             <AppText variant="caption" tone="secondary">
-              Prueba una nota y mira cómo cambia tu escenario
+              {strings.simulator.hint}
             </AppText>
           ) : null}
         </AppCard>
 
-        <AppCard title="Importante" variant="accent" accentTone="warm">
-          <AppBadge label="No modifica tus datos" tone="warning" />
-          <AppText variant="body" tone="secondary">
-            Esta simulación no modifica tus notas reales.
+        <AppCard
+          title={strings.simulator.importantTitle}
+          variant="accent"
+          accentTone="warm"
+        >
+          <AppBadge label={strings.simulator.noDataChanges} tone="warning" />
+          <AppText variant="bodySecondary">
+            {strings.simulator.noDataChangesDescription}
           </AppText>
         </AppCard>
 
-        <AppCard title="1. Selecciona un ramo" variant="elevated">
+        <AppCard
+          title={strings.simulator.selectSubjectTitle}
+          variant="elevated"
+        >
           {subjects.length === 0 ? (
-            <AppText variant="body" tone="secondary">
-              No hay ramos disponibles para simular.
+            <AppText variant="bodySecondary">
+              {strings.simulator.noSubjects}
             </AppText>
           ) : (
             <View style={styles.selectionList}>
@@ -277,7 +289,8 @@ export default function SimulatorScreen() {
                       {subject.name}
                     </AppText>
                     <AppText tone="secondary" variant="caption">
-                      Nota mínima: {subject.minimumGrade.toFixed(1)}
+                      {strings.simulator.minimumGradePrefix}{" "}
+                      {subject.minimumGrade.toFixed(1)}
                     </AppText>
                   </Pressable>
                 );
@@ -288,16 +301,16 @@ export default function SimulatorScreen() {
 
         {selectedSubject ? (
           <AppCard
-            title="2. Selecciona evaluación pendiente"
+            title={strings.simulator.selectPendingEvaluationTitle}
             variant="elevated"
           >
             {evaluations.length === 0 ? (
-              <AppText variant="body" tone="secondary">
-                Este ramo aún no tiene evaluaciones registradas.
+              <AppText variant="bodySecondary">
+                {strings.simulator.noEvaluations}
               </AppText>
             ) : pendingEvaluations.length === 0 ? (
-              <AppText variant="body" tone="secondary">
-                Este ramo no tiene evaluaciones pendientes para simular.
+              <AppText variant="bodySecondary">
+                {strings.simulator.noPendingEvaluations}
               </AppText>
             ) : (
               <View style={styles.selectionList}>
@@ -331,7 +344,8 @@ export default function SimulatorScreen() {
                         {evaluation.name}
                       </AppText>
                       <AppText tone="secondary" variant="caption">
-                        Ponderación: {evaluation.weight.toFixed(2)}%
+                        {strings.simulator.weightPrefix}{" "}
+                        {evaluation.weight.toFixed(2)}%
                       </AppText>
                     </Pressable>
                   );
@@ -342,17 +356,20 @@ export default function SimulatorScreen() {
         ) : null}
 
         {selectedPendingEvaluation ? (
-          <AppCard title="3. Nota simulada" variant="glass">
+          <AppCard
+            title={strings.simulator.simulatedGradeTitle}
+            variant="glass"
+          >
             <AppInput
-              label="Ingresa la nota simulada"
+              label={strings.simulator.simulatedGradeLabel}
               value={simulatedGradeInput}
               onChangeText={handleSimulatedGradeChange}
               keyboardType="decimal-pad"
-              placeholder="Ej: 5.5"
+              placeholder={strings.simulator.simulatedGradePlaceholder}
               error={simulatedGradeError}
             />
             <AppButton
-              label="Calcular"
+              label={strings.simulator.calculate}
               style={styles.calculateButton}
               onPress={handleCalculateProjection}
             />
@@ -361,24 +378,24 @@ export default function SimulatorScreen() {
 
         {projectedSummary ? (
           <AppCard
-            title="4. Resultado proyectado"
+            title={strings.simulator.resultTitle}
             variant="accent"
             accentTone="cool"
           >
             <View style={styles.resultList}>
               <View style={styles.rowBetween}>
-                <AppText variant="body" tone="secondary">
-                  Promedio proyectado
+                <AppText variant="bodySecondary">
+                  {strings.simulator.projectedAverage}
                 </AppText>
-                <AppText variant="metric">
+                <AppText variant="metricValue">
                   {projectedSummary.currentAverage != null
                     ? projectedSummary.currentAverage.toFixed(2)
-                    : "Sin notas válidas"}
+                    : strings.simulator.noValidGrades}
                 </AppText>
               </View>
               <View style={styles.rowBetween}>
-                <AppText variant="body" tone="secondary">
-                  Estado proyectado
+                <AppText variant="bodySecondary">
+                  {strings.simulator.projectedStatus}
                 </AppText>
                 <AppBadge
                   label={academicStatusLabels[projectedSummary.status]}
@@ -397,18 +414,18 @@ export default function SimulatorScreen() {
                 />
               </View>
               <View style={styles.rowBetween}>
-                <AppText variant="body" tone="secondary">
-                  Nota necesaria proyectada
+                <AppText variant="bodySecondary">
+                  {strings.simulator.projectedRequiredGrade}
                 </AppText>
                 <AppText variant="h3">
                   {projectedSummary.requiredGrade != null
                     ? projectedSummary.requiredGrade.toFixed(2)
-                    : "Sin pendientes"}
+                    : strings.simulator.noPending}
                 </AppText>
               </View>
             </View>
             <AppCard variant="glass" animateOnMount>
-              <AppText variant="body" tone="secondary">
+              <AppText variant="bodySecondary">
                 {projectedSummary.advice}
               </AppText>
             </AppCard>
@@ -421,7 +438,7 @@ export default function SimulatorScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.xxl,
+    gap: spacing.lg,
   },
   heroStatsRow: {
     flexDirection: "row",

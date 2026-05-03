@@ -8,7 +8,7 @@ import {
     type ViewStyle,
 } from "react-native";
 
-import { AnimatedProgressBar } from "@/src/components/charts";
+import { AcademicSummaryPanel } from "@/src/components/academic";
 import { AppHeader } from "@/src/components/layout/AppHeader";
 import {
     AppBadge,
@@ -18,6 +18,7 @@ import {
     AppScreen,
     AppText,
 } from "@/src/components/ui";
+import { strings } from "@/src/constants/strings";
 import type { Evaluation, Subject } from "@/src/domain/entities";
 import { academicStatusLabels } from "@/src/domain/entities";
 import {
@@ -26,6 +27,7 @@ import {
     MIN_GRADE,
 } from "@/src/domain/rules";
 import { calculateQuickAcademicSummary } from "@/src/features/calculator/services/calculatorService";
+import { parseAcademicNumber } from "@/src/domain/utils/parseAcademicNumber";
 import { spacing, useAppTheme } from "@/src/theme";
 
 type QuickEvaluationForm = {
@@ -36,44 +38,51 @@ type QuickEvaluationForm = {
 };
 
 const INITIAL_EVALUATIONS: QuickEvaluationForm[] = [
-  { id: "evaluation-1", name: "Prueba n°1", grade: "", weight: "32" },
-  { id: "evaluation-2", name: "Prueba n°2", grade: "", weight: "12" },
-  { id: "evaluation-3", name: "Prueba n°3", grade: "", weight: "32" },
-  { id: "evaluation-4", name: "Prueba n°4", grade: "", weight: "12" },
-  { id: "evaluation-5", name: "Prueba n°5", grade: "", weight: "12" },
+  {
+    id: "evaluation-1",
+    name: strings.quickCalculator.initialEvaluationName(1),
+    grade: "",
+    weight: "32",
+  },
+  {
+    id: "evaluation-2",
+    name: strings.quickCalculator.initialEvaluationName(2),
+    grade: "",
+    weight: "12",
+  },
+  {
+    id: "evaluation-3",
+    name: strings.quickCalculator.initialEvaluationName(3),
+    grade: "",
+    weight: "32",
+  },
+  {
+    id: "evaluation-4",
+    name: strings.quickCalculator.initialEvaluationName(4),
+    grade: "",
+    weight: "12",
+  },
+  {
+    id: "evaluation-5",
+    name: strings.quickCalculator.initialEvaluationName(5),
+    grade: "",
+    weight: "12",
+  },
 ];
-
-function normalizeNumberInput(value: string): string {
-  return value.replace(",", ".").trim();
-}
-
-function parseNumber(value: string): number | null {
-  const normalized = normalizeNumberInput(value);
-  if (!normalized) {
-    return null;
-  }
-
-  const parsed = Number(normalized);
-  if (Number.isNaN(parsed)) {
-    return null;
-  }
-
-  return parsed;
-}
 
 function createEvaluationPayload(
   subjectId: string,
   minimumGrade: number,
   form: QuickEvaluationForm,
 ): Evaluation {
-  const parsedGrade = parseNumber(form.grade);
-  const parsedWeight = parseNumber(form.weight);
+  const parsedGrade = parseAcademicNumber(form.grade);
+  const parsedWeight = parseAcademicNumber(form.weight);
   const now = new Date().toISOString();
 
   return {
     id: form.id,
     subjectId,
-    name: form.name.trim() || "Evaluacion",
+    name: form.name.trim() || strings.quickCalculator.defaultEvaluationName,
     grade: parsedGrade,
     weight: parsedWeight ?? 0,
     minimumGrade,
@@ -83,21 +92,13 @@ function createEvaluationPayload(
   };
 }
 
-function formatGrade(value: number | null | undefined): string {
-  if (typeof value !== "number") {
-    return "Pendiente";
-  }
-
-  return value.toFixed(2);
-}
-
 function formatPercent(value: number): string {
   return `${value.toFixed(0)}%`;
 }
 
 function formatSummaryGrade(value: number | null | undefined): string {
   if (typeof value !== "number") {
-    return "Pendiente";
+    return strings.quickCalculator.pending;
   }
 
   return value.toFixed(2);
@@ -151,7 +152,7 @@ export default function QuickCalculatorScreen() {
   const [evaluations, setEvaluations] =
     useState<QuickEvaluationForm[]>(INITIAL_EVALUATIONS);
 
-  const parsedMinimumGrade = parseNumber(minimumGradeInput);
+  const parsedMinimumGrade = parseAcademicNumber(minimumGradeInput);
   const isMinimumGradeValid =
     parsedMinimumGrade !== null &&
     parsedMinimumGrade >= MIN_GRADE &&
@@ -162,7 +163,7 @@ export default function QuickCalculatorScreen() {
 
     return {
       id: "quick-calculator-subject",
-      name: "Cálculo rápido",
+      name: strings.quickCalculator.quickSubjectName,
       passingGrade: isMinimumGradeValid
         ? parsedMinimumGrade
         : DEFAULT_PASSING_GRADE,
@@ -203,24 +204,23 @@ export default function QuickCalculatorScreen() {
 
   const displayRequiredGrade = hasCompleteWeight
     ? summary.requiredGrade == null
-      ? "—"
+      ? strings.quickCalculator.statusNotAvailable
       : summary.requiredGrade.toFixed(2)
-    : "Revisar ponderaciones";
+    : strings.quickCalculator.reviewWeights;
 
   const displayFinalProjectedGrade = hasCompleteWeight
     ? formatSummaryGrade(summary.finalGrade)
-    : "Revisar ponderaciones";
+    : strings.quickCalculator.reviewWeights;
 
   const displayStatusLabel = hasCompleteWeight
     ? academicStatusLabels[summary.status]
-    : "Pendiente";
+    : strings.quickCalculator.pending;
 
   const displayAdvice = hasCompleteWeight
-    ? (summary.advice ?? "Sin consejo disponible.")
-    : "Completa las ponderaciones hasta llegar a 100% para obtener un cálculo confiable.";
+    ? (summary.advice ?? strings.quickCalculator.noAdvice)
+    : strings.quickCalculator.completeWeightsAdvice;
 
   const completedProgress = Math.max(0, Math.min(100, summary.completedWeight));
-  const pendingProgress = Math.max(0, Math.min(100, summary.pendingWeight));
 
   const statusTone =
     summary.status === "approved" || summary.status === "favorable"
@@ -232,30 +232,6 @@ export default function QuickCalculatorScreen() {
         : summary.status === "pending"
           ? "pending"
           : "info";
-
-  const guidanceTone = weightWarning
-    ? "warning"
-    : statusTone === "danger"
-      ? "danger"
-      : statusTone === "success"
-        ? "success"
-        : "info";
-
-  const guidanceTitle = weightWarning
-    ? "Ajusta tu base"
-    : statusTone === "danger"
-      ? "Todavía estás a tiempo"
-      : statusTone === "success"
-        ? "Vas por excelente camino"
-        : "Sigue afinando tu estrategia";
-
-  const guidanceLead = weightWarning
-    ? "Necesitas cerrar la ponderación total al 100% para obtener un resultado confiable."
-    : statusTone === "danger"
-      ? "Tu escenario requiere intervención, pero con foco puedes revertirlo."
-      : statusTone === "success"
-        ? "Tu desempeño es favorable. Mantén el ritmo y cuida la consistencia."
-        : "Tu progreso es estable; pequeños ajustes pueden mejorar tu resultado final.";
 
   const glassSurface =
     theme.mode === "dark"
@@ -283,7 +259,7 @@ export default function QuickCalculatorScreen() {
       ...current,
       {
         id: `evaluation-${Date.now()}`,
-        name: `Evaluacion ${current.length + 1}`,
+        name: strings.quickCalculator.evaluationPlaceholder(current.length + 1),
         grade: "",
         weight: "",
       },
@@ -306,10 +282,8 @@ export default function QuickCalculatorScreen() {
   };
 
   return (
-    <AppScreen scrollable>
+    <AppScreen scrollable stickyHeader={<AppHeader />}>
       <View style={styles.container}>
-        <AppHeader />
-
         <EntryCard>
           <View style={styles.heroRoot}>
             <View style={styles.heroOrbs} pointerEvents="none">
@@ -336,12 +310,11 @@ export default function QuickCalculatorScreen() {
               />
 
               <View style={styles.heroHeader}>
-                <AppText variant="h2" style={styles.heroMainMessage}>
-                  Calcula tu escenario académico en segundos
+                <AppText variant="cardTitle" style={styles.heroMainMessage}>
+                  {strings.quickCalculator.heroTitle}
                 </AppText>
-                <AppText variant="body" tone="secondary">
-                  Agrega tus evaluaciones, deja pendientes las notas que aún no
-                  tienes y revisa qué necesitas para aprobar.
+                <AppText variant="bodySecondary">
+                  {strings.quickCalculator.heroDescription}
                 </AppText>
                 <AppBadge label={displayStatusLabel} tone={statusTone} />
               </View>
@@ -358,17 +331,17 @@ export default function QuickCalculatorScreen() {
                 <View style={styles.heroStepsRow}>
                   <View style={styles.heroStepPill}>
                     <AppText variant="caption" tone="secondary" align="center">
-                      1. Define ponderaciones
+                      {strings.quickCalculator.stepDefineWeights}
                     </AppText>
                   </View>
                   <View style={styles.heroStepPill}>
                     <AppText variant="caption" tone="secondary" align="center">
-                      2. Ingresa tus notas
+                      {strings.quickCalculator.stepEnterGrades}
                     </AppText>
                   </View>
                   <View style={styles.heroStepPill}>
                     <AppText variant="caption" tone="secondary" align="center">
-                      3. Revisa tu resultado
+                      {strings.quickCalculator.stepReviewResult}
                     </AppText>
                   </View>
                 </View>
@@ -385,13 +358,13 @@ export default function QuickCalculatorScreen() {
                     tone="warning"
                     style={styles.heroReminderText}
                   >
-                    Una nota vacía se toma como pendiente, no como cero.
+                    {strings.quickCalculator.reminderPendingGrade}
                   </AppText>
                 </View>
               </View>
 
               <AppButton
-                label="Agregar evaluación"
+                label={strings.quickCalculator.addEvaluation}
                 onPress={addEvaluation}
                 style={styles.heroCta}
               />
@@ -401,26 +374,25 @@ export default function QuickCalculatorScreen() {
 
         <EntryCard delay={60}>
           <AppCard
-            title="Antes de comenzar"
+            title={strings.quickCalculator.beforeStartTitle}
             style={[
               styles.glassCard,
               { backgroundColor: glassSurface, borderColor: glassBorder },
             ]}
           >
-            <AppText tone="secondary">
-              Ingresa tus evaluaciones, notas y ponderaciones. Las notas
-              pendientes no se calculan como cero.
+            <AppText variant="bodySecondary">
+              {strings.quickCalculator.beforeStartDescription}
             </AppText>
           </AppCard>
         </EntryCard>
 
         <EntryCard delay={90}>
           <AppCard
-            title="Configuración rápida"
+            title={strings.quickCalculator.quickSettingsTitle}
             style={[styles.glassCard, { borderColor: glassBorder }]}
           >
             <AppInput
-              label="Nota mínima de aprobación"
+              label={strings.quickCalculator.minimumPassingGradeLabel}
               value={minimumGradeInput}
               onChangeText={setMinimumGradeInput}
               keyboardType="decimal-pad"
@@ -428,7 +400,10 @@ export default function QuickCalculatorScreen() {
               error={
                 isMinimumGradeValid
                   ? undefined
-                  : `La nota mínima debe estar entre ${MIN_GRADE} y ${MAX_GRADE}.`
+                  : strings.quickCalculator.minimumPassingGradeError(
+                      MIN_GRADE,
+                      MAX_GRADE,
+                    )
               }
             />
           </AppCard>
@@ -436,27 +411,27 @@ export default function QuickCalculatorScreen() {
 
         <EntryCard delay={120}>
           <AppCard
-            title="Evaluaciones"
-            subtitle="Edición temporal"
+            title={strings.quickCalculator.evaluationsTitle}
+            subtitle={strings.quickCalculator.temporaryEditSubtitle}
             style={[styles.glassCard, { borderColor: glassBorder }]}
           >
             <View style={styles.evaluationsList}>
               {evaluations.map((evaluation, index) => {
-                const parsedGrade = parseNumber(evaluation.grade);
-                const parsedWeight = parseNumber(evaluation.weight);
+                const parsedGrade = parseAcademicNumber(evaluation.grade);
+                const parsedWeight = parseAcademicNumber(evaluation.weight);
                 const gradeError =
                   evaluation.grade.trim() &&
                   (parsedGrade === null ||
                     parsedGrade < MIN_GRADE ||
                     parsedGrade > MAX_GRADE)
-                    ? `La nota debe estar entre ${MIN_GRADE} y ${MAX_GRADE}.`
+                    ? strings.quickCalculator.gradeError(MIN_GRADE, MAX_GRADE)
                     : undefined;
                 const weightError =
                   evaluation.weight.trim() &&
                   (parsedWeight === null ||
                     parsedWeight < 0 ||
                     parsedWeight > 100)
-                    ? "La ponderación debe estar entre 0 y 100."
+                    ? strings.quickCalculator.weightError
                     : undefined;
 
                 return (
@@ -473,28 +448,32 @@ export default function QuickCalculatorScreen() {
                       <View style={styles.evaluationHeader}>
                         <View style={styles.evaluationTag}>
                           <AppText variant="caption" tone="secondary">
-                            Evaluación #{index + 1}
+                            {strings.quickCalculator.evaluationNumber(
+                              index + 1,
+                            )}
                           </AppText>
                         </View>
                         <AppButton
-                          label="Eliminar"
+                          label={strings.common.delete}
                           variant="ghost"
                           onPress={() => removeEvaluation(evaluation.id)}
                         />
                       </View>
 
                       <AppInput
-                        label="Nombre"
+                        label={strings.quickCalculator.nameLabel}
                         value={evaluation.name}
                         onChangeText={(value) =>
                           updateEvaluation(evaluation.id, "name", value)
                         }
-                        placeholder={`Evaluación ${index + 1}`}
+                        placeholder={strings.quickCalculator.evaluationPlaceholder(
+                          index + 1,
+                        )}
                       />
 
                       <View style={styles.inlineFields}>
                         <AppInput
-                          label="Nota"
+                          label={strings.quickCalculator.gradeLabel}
                           value={evaluation.grade}
                           onChangeText={(value) =>
                             updateEvaluation(evaluation.id, "grade", value)
@@ -504,7 +483,7 @@ export default function QuickCalculatorScreen() {
                           containerStyle={styles.inlineField}
                         />
                         <AppInput
-                          label="Ponderación (%)"
+                          label={strings.quickCalculator.weightLabel}
                           value={evaluation.weight}
                           onChangeText={(value) =>
                             updateEvaluation(evaluation.id, "weight", value)
@@ -523,7 +502,7 @@ export default function QuickCalculatorScreen() {
 
             <View style={styles.evaluationActions}>
               <AppButton
-                label="+ Agregar evaluación"
+                label={strings.quickCalculator.addEvaluationWithPrefix}
                 variant="outline"
                 style={styles.sectionAction}
                 onPress={addEvaluation}
@@ -531,12 +510,11 @@ export default function QuickCalculatorScreen() {
 
               {weightWarning ? (
                 <AppText tone="warning" style={styles.warningText}>
-                  La suma de ponderaciones es {totalWeight.toFixed(0)}%. Para
-                  calcular la nota necesaria, debe ser 100%.
+                  {strings.quickCalculator.totalWeightWarning(totalWeight)}
                 </AppText>
               ) : (
                 <AppText tone="success" style={styles.warningText}>
-                  Perfecto: tu ponderación total está en 100%.
+                  {strings.quickCalculator.totalWeightSuccess}
                 </AppText>
               )}
             </View>
@@ -544,167 +522,65 @@ export default function QuickCalculatorScreen() {
         </EntryCard>
 
         <EntryCard delay={170}>
-          <AppCard
-            title="Resumen académico"
-            subtitle="Actualización en tiempo real"
+          <AcademicSummaryPanel
+            title={strings.quickCalculator.summaryTitle}
+            subtitle={strings.quickCalculator.liveUpdateSubtitle}
+            accumulatedPoints={summary.accumulatedPoints}
+            currentWeightedAverage={summary.currentAverage}
+            completedWeight={summary.completedWeight}
+            pendingWeight={summary.pendingWeight}
+            requiredGrade={summary.requiredGrade ?? null}
+            finalProjectedGrade={summary.finalGrade}
+            requiredGradeLabel={displayRequiredGrade}
+            finalProjectedGradeLabel={displayFinalProjectedGrade}
+            status={summary.status}
+            advice={displayAdvice}
+            minimumGrade={subject.passingGrade}
+            footer={
+              <>
+                <View
+                  style={[
+                    styles.weightStatusCard,
+                    {
+                      backgroundColor: glassSurface,
+                      borderColor: weightWarning
+                        ? theme.warning
+                        : theme.success,
+                    },
+                  ]}
+                >
+                  <AppText variant="bodyStrong">
+                    {strings.quickCalculator.totalWeightTitle}
+                  </AppText>
+                  <AppText variant="h3">{formatPercent(totalWeight)}</AppText>
+                  <AppText tone={weightWarning ? "warning" : "success"}>
+                    {weightWarning
+                      ? strings.quickCalculator.projectionAdjustPending
+                      : strings.quickCalculator.projectionAdjustDone}
+                  </AppText>
+                </View>
+
+                <View style={styles.actionsRow}>
+                  <AppButton
+                    label={strings.quickCalculator.clear}
+                    variant="outline"
+                    style={styles.actionButton}
+                    onPress={resetCalculator}
+                  />
+                </View>
+              </>
+            }
             style={[styles.glassCard, { borderColor: glassBorder }]}
-          >
-            <View style={styles.summaryGrid}>
-              <View
-                style={[styles.summaryMetricCard, { borderColor: theme.info }]}
-              >
-                <AppText variant="caption" tone="secondary">
-                  Promedio actual
-                </AppText>
-                <AppText variant="h3">
-                  {formatGrade(summary.currentAverage)}
-                </AppText>
-              </View>
-
-              <View
-                style={[
-                  styles.summaryMetricCard,
-                  { borderColor: theme.primary },
-                ]}
-              >
-                <AppText variant="caption" tone="secondary">
-                  Puntos acumulados
-                </AppText>
-                <AppText variant="h3">
-                  {summary.accumulatedPoints.toFixed(2)}
-                </AppText>
-              </View>
-
-              <View
-                style={[
-                  styles.summaryMetricCard,
-                  { borderColor: theme.warning },
-                ]}
-              >
-                <AppText variant="caption" tone="secondary">
-                  Pendiente
-                </AppText>
-                <AppText variant="h3" tone="warning">
-                  {formatPercent(summary.pendingWeight)}
-                </AppText>
-              </View>
-
-              <View
-                style={[
-                  styles.summaryMetricCard,
-                  { borderColor: theme.success },
-                ]}
-              >
-                <AppText variant="caption" tone="secondary">
-                  Rendido
-                </AppText>
-                <AppText variant="h3" tone="success">
-                  {formatPercent(summary.completedWeight)}
-                </AppText>
-              </View>
-
-              <View
-                style={[
-                  styles.summaryMetricCard,
-                  { borderColor: theme.secondary },
-                ]}
-              >
-                <AppText variant="caption" tone="secondary">
-                  Final proyectada
-                </AppText>
-                <AppText variant="h3">{displayFinalProjectedGrade}</AppText>
-              </View>
-
-              <View
-                style={[
-                  styles.summaryMetricCard,
-                  { borderColor: theme.warning },
-                ]}
-              >
-                <AppText variant="caption" tone="secondary">
-                  Nota necesaria
-                </AppText>
-                <AppText variant="h3" tone="warning">
-                  {displayRequiredGrade}
-                </AppText>
-              </View>
-            </View>
-
-            <View
-              style={[
-                styles.weightStatusCard,
-                {
-                  backgroundColor: glassSurface,
-                  borderColor: weightWarning ? theme.warning : theme.success,
-                },
-              ]}
-            >
-              <AppText variant="bodyStrong">Suma de ponderaciones</AppText>
-              <AppText variant="h3">{formatPercent(totalWeight)}</AppText>
-              <AppText tone={weightWarning ? "warning" : "success"}>
-                {weightWarning
-                  ? `Aún falta ajustar al 100% para una proyección exacta.`
-                  : "Perfecto: ponderación completa para proyectar con confianza."}
-              </AppText>
-            </View>
-
-            <View style={styles.progressSection}>
-              <AnimatedProgressBar
-                value={completedProgress}
-                label="Progreso rendido"
-                duration={800}
-                height={8}
-              />
-              <AnimatedProgressBar
-                value={pendingProgress}
-                label="Progreso pendiente"
-                duration={920}
-                height={8}
-              />
-            </View>
-
-            <View style={styles.actionsRow}>
-              <AppButton
-                label="Limpiar"
-                variant="outline"
-                style={styles.actionButton}
-                onPress={resetCalculator}
-              />
-            </View>
-          </AppCard>
+          />
         </EntryCard>
 
         <EntryCard delay={200}>
           <AppCard
-            title="Consejo académico"
-            style={[
-              styles.glassCard,
-              { backgroundColor: glassSurface, borderColor: glassBorder },
-            ]}
+            title={strings.quickCalculator.howItsCalculated}
+            style={styles.glassCard}
           >
-            <LinearGradient
-              colors={["rgba(37,99,235,0.16)", "rgba(6,182,212,0.08)"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.adviceGlow}
-            />
-
-            <View style={styles.adviceContent}>
-              <AppText variant="h3" tone={guidanceTone}>
-                {guidanceTitle}
-              </AppText>
-              <AppText tone="secondary">{guidanceLead}</AppText>
-              <AppText tone="secondary">{displayAdvice}</AppText>
-            </View>
-          </AppCard>
-        </EntryCard>
-
-        <EntryCard delay={220}>
-          <AppCard title="¿Cómo se calcula?" style={styles.glassCard}>
-            <AppText tone="secondary">
-              La nota se calcula mediante promedio ponderado. Cada evaluación
-              aporta a la nota final según su porcentaje. Las evaluaciones sin
-              nota se consideran pendientes y no se cuentan como cero.
+            <AppText variant="bodySecondary">
+              {strings.quickCalculator.howItsCalculatedDescription}
             </AppText>
           </AppCard>
         </EntryCard>
@@ -762,15 +638,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 24,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+    gap: spacing.md,
   },
   heroGlowLine: {
     height: 3,
     borderRadius: 999,
   },
   heroHeader: {
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   heroMainMessage: {
     paddingRight: spacing.sm,
@@ -779,7 +655,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     padding: spacing.sm,
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   heroStepsRow: {
     flexDirection: "row",
@@ -842,7 +718,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   evaluationActions: {
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   sectionAction: {
     minHeight: 48,
@@ -850,26 +726,10 @@ const styles = StyleSheet.create({
   warningText: {
     marginTop: 2,
   },
-  summaryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  summaryMetricCard: {
-    width: "48%",
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-    gap: 3,
-  },
   weightStatusCard: {
     borderWidth: 1,
     borderRadius: 14,
     padding: spacing.sm,
-    gap: spacing.xs,
-  },
-  progressSection: {
     gap: spacing.sm,
   },
   actionsRow: {
@@ -879,12 +739,5 @@ const styles = StyleSheet.create({
   actionButton: {
     minWidth: 132,
     minHeight: 48,
-  },
-  adviceGlow: {
-    borderRadius: 14,
-    ...StyleSheet.absoluteFillObject,
-  },
-  adviceContent: {
-    gap: spacing.xs,
   },
 });

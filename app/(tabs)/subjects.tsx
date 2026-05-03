@@ -6,8 +6,8 @@ import { Pressable, StyleSheet, View } from "react-native";
 import {
     AnimatedProgressBar,
     AnimatedStatCard,
-    MiniTrendChart,
 } from "@/src/components/charts";
+import { SubjectStatusDistribution } from "@/src/components/academic";
 import { AppHeader } from "@/src/components/layout/AppHeader";
 import {
     AppBadge,
@@ -16,6 +16,8 @@ import {
     AppScreen,
     AppText,
 } from "@/src/components/ui";
+import { strings } from "@/src/constants/strings";
+import type { AcademicStatus } from "@/src/domain/entities";
 import { getSubjects } from "@/src/features/subjects/services/subjectService";
 import type { SubjectListItem } from "@/src/features/subjects/types/subject.types";
 import { buildSubjectDashboardMetrics } from "@/src/features/subjects/utils/dashboardMetrics";
@@ -31,7 +33,8 @@ export default function SubjectsScreen() {
     subjectsWithEvaluations: 0,
     subjectsAtRisk: 0,
     overallProgress: 0,
-    trendPoints: [8, 14, 22, 16, 28, 34],
+    perSubjectEvaluationCounts: {} as Record<string, number>,
+    perSubjectStatuses: {} as Record<string, AcademicStatus>,
   });
 
   const loadSubjects = useCallback(async () => {
@@ -48,55 +51,54 @@ export default function SubjectsScreen() {
   );
 
   return (
-    <AppScreen scrollable>
+    <AppScreen scrollable stickyHeader={<AppHeader />}>
       <View style={styles.container}>
-        <AppHeader />
-
         <AppCard variant="elevated" showTopAccent>
-          <AppText variant="h3" style={{ color: theme.primary }}>
-            Estado global de tus ramos
+          <AppText variant="sectionTitle" tone="accent">
+            {strings.subjectsTab.globalStatusTitle}
           </AppText>
           <AnimatedProgressBar
             value={heroMetrics.overallProgress}
-            label="Progreso general rendido"
+            label={strings.subjectsTab.overallProgress}
             duration={900}
             height={8}
           />
           <View style={styles.heroStatsRow}>
             <AnimatedStatCard
-              label="Total"
+              label={strings.subjectsTab.total}
               value={`${heroMetrics.totalSubjects}`}
               tone="info"
             />
             <AnimatedStatCard
-              label="Con evaluaciones"
+              label={strings.subjectsTab.withEvaluations}
               value={`${heroMetrics.subjectsWithEvaluations}`}
               delay={80}
             />
             <AnimatedStatCard
-              label="En riesgo"
+              label={strings.subjectsTab.atRisk}
               value={`${heroMetrics.subjectsAtRisk}`}
               tone={heroMetrics.subjectsAtRisk > 0 ? "warning" : "success"}
               delay={160}
             />
           </View>
-          <MiniTrendChart points={heroMetrics.trendPoints} />
+          <SubjectStatusDistribution
+            subjects={subjects}
+            subjectStatuses={heroMetrics.perSubjectStatuses}
+          />
           {heroMetrics.totalSubjects === 0 ? (
             <AppText variant="caption" tone="secondary">
-              Comienza agregando tu primer ramo para activar tu panel visual.
+              {strings.subjectsTab.startByAdding}
             </AppText>
           ) : null}
         </AppCard>
 
         {subjects.length === 0 ? (
-          <AppCard title="Aún no tienes ramos registrados." variant="glass">
-            <AppText variant="body" tone="secondary">
-              Crea tu primer ramo para guardar evaluaciones, ponderaciones,
-              notas pendientes y calcular tu estado académico durante el
-              semestre.
+          <AppCard title={strings.subjectsTab.noSubjectsTitle} variant="glass">
+            <AppText variant="bodySecondary">
+              {strings.subjectsTab.noSubjectsDescription}
             </AppText>
             <AppButton
-              label="Agregar"
+              label={strings.subjectsTab.add}
               style={styles.primaryAction}
               onPress={() => router.push(createSubjectRoute)}
             />
@@ -104,13 +106,13 @@ export default function SubjectsScreen() {
         ) : (
           <View style={styles.subjectsList}>
             <AppCard
-              title="Tus ramos"
-              subtitle="Guardados localmente en este dispositivo"
+              title={strings.subjectsTab.yourSubjectsTitle}
+              subtitle={strings.subjectsTab.yourSubjectsSubtitle}
               variant="accent"
               accentTone="cool"
             >
               <AppButton
-                label="Agregar"
+                label={strings.subjectsTab.add}
                 variant="outline"
                 style={styles.primaryAction}
                 onPress={() => router.push(createSubjectRoute)}
@@ -123,7 +125,11 @@ export default function SubjectsScreen() {
                 onPress={() => router.push(`/subjects/${subject.id}` as Href)}
                 style={styles.subjectCardPressable}
               >
-                <AppCard variant="elevated" animateOnMount>
+                <AppCard
+                  variant="elevated"
+                  animateOnMount
+                  style={{ borderLeftColor: subject.color, borderLeftWidth: 4 }}
+                >
                   <View style={styles.subjectHeader}>
                     <AppText
                       variant="h3"
@@ -143,33 +149,64 @@ export default function SubjectsScreen() {
                       ]}
                     />
                   </View>
-                  <AppText variant="body" tone="secondary">
-                    Nota mínima: {subject.minimumGrade.toFixed(1)}
+                  <AppText variant="bodySecondary">
+                    {strings.subjectsTab.minimumGradePrefix}{" "}
+                    {subject.minimumGrade.toFixed(1)}
                   </AppText>
-                  <AppBadge label="Sin evaluaciones" tone="pending" />
+                  {(heroMetrics.perSubjectEvaluationCounts[subject.id] ?? 0) === 0 ? (
+                    <AppBadge
+                      label={strings.subjectsTab.noEvaluations}
+                      tone="pending"
+                    />
+                  ) : (
+                    <AppBadge
+                      label={
+                        heroMetrics.perSubjectEvaluationCounts[subject.id] === 1
+                          ? "1 evaluación"
+                          : `${heroMetrics.perSubjectEvaluationCounts[subject.id]} evaluaciones`
+                      }
+                      tone="info"
+                    />
+                  )}
                 </AppCard>
               </Pressable>
             ))}
           </View>
         )}
 
-        <AppCard title="¿Qué podrás revisar por ramo?" variant="glass">
+        <AppCard
+          title={strings.subjectsTab.perSubjectChecklistTitle}
+          variant="glass"
+        >
           <View style={styles.educationalList}>
-            <AppText variant="body">Promedio ponderado actual</AppText>
-            <AppText variant="body">Puntos acumulados</AppText>
-            <AppText variant="body">Ponderación rendida y pendiente</AppText>
-            <AppText variant="body">Nota necesaria para aprobar</AppText>
-            <AppText variant="body">Estado académico automático</AppText>
-            <AppText variant="body">
-              Evaluación pendiente más importante
+            <AppText variant="bodySecondary">
+              {strings.subjectsTab.checklistCurrentAverage}
+            </AppText>
+            <AppText variant="bodySecondary">
+              {strings.subjectsTab.checklistAccumulatedPoints}
+            </AppText>
+            <AppText variant="bodySecondary">
+              {strings.subjectsTab.checklistWeightProgress}
+            </AppText>
+            <AppText variant="bodySecondary">
+              {strings.subjectsTab.checklistRequiredGrade}
+            </AppText>
+            <AppText variant="bodySecondary">
+              {strings.subjectsTab.checklistAcademicStatus}
+            </AppText>
+            <AppText variant="bodySecondary">
+              {strings.subjectsTab.checklistMostImportantPending}
             </AppText>
           </View>
         </AppCard>
 
-        <AppCard title="Siguiente mejora" variant="accent" accentTone="warm">
-          <AppText variant="body" tone="secondary">
-            Pronto podrás crear ramos, agregar evaluaciones y guardar tu avance
-            localmente en el dispositivo.
+        <AppCard
+          title={strings.subjectsTab.nextImprovementTitle}
+          variant="accent"
+          accentTone="warm"
+        >
+          <AppText variant="bodySecondary">
+            {strings.subjectsTab.nextImprovementDescription}
           </AppText>
         </AppCard>
       </View>
@@ -179,7 +216,7 @@ export default function SubjectsScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.xxl,
+    gap: spacing.lg,
   },
   heroStatsRow: {
     flexDirection: "row",

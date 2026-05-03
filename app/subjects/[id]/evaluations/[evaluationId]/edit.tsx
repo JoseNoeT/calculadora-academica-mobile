@@ -9,7 +9,9 @@ import {
     AppScreen,
     AppText,
 } from "@/src/components/ui";
+import { strings } from "@/src/constants/strings";
 import { MAX_GRADE, MIN_GRADE } from "@/src/domain/rules";
+import { parseAcademicNumber } from "@/src/domain/utils/parseAcademicNumber";
 import {
     getEvaluationById,
     updateEvaluation,
@@ -48,7 +50,7 @@ export default function EditEvaluationScreen() {
         }
 
         if (!evaluation || evaluation.subjectId !== params.id) {
-          setLoadError("La evaluación no existe o no pertenece a este ramo.");
+          setLoadError(strings.editEvaluation.missingEvaluation);
           setIsLoading(false);
           return;
         }
@@ -65,7 +67,7 @@ export default function EditEvaluationScreen() {
         if (!isMounted) {
           return;
         }
-        setLoadError("No se pudo cargar la evaluación.");
+        setLoadError(strings.editEvaluation.loadFailed);
         setIsLoading(false);
       }
     };
@@ -77,31 +79,22 @@ export default function EditEvaluationScreen() {
     };
   }, [params.evaluationId, params.id]);
 
-  const parseDecimal = (value: string): number | null => {
-    const normalized = value.replace(",", ".").trim();
-    if (!normalized) {
-      return null;
-    }
-    const parsed = Number(normalized);
-    return Number.isNaN(parsed) ? null : parsed;
-  };
-
   const handleSave = async () => {
     const trimmedName = name.trim();
-    const parsedWeight = parseDecimal(weight);
-    const parsedGrade = grade.trim() ? parseDecimal(grade) : null;
+    const parsedWeight = parseAcademicNumber(weight);
+    const parsedGrade = grade.trim() ? parseAcademicNumber(grade) : null;
 
     let hasError = false;
 
     if (!trimmedName) {
-      setNameError("El nombre de la evaluación es obligatorio.");
+      setNameError(strings.editEvaluation.nameRequired);
       hasError = true;
     } else {
       setNameError(undefined);
     }
 
     if (parsedWeight === null || parsedWeight < 0 || parsedWeight > 100) {
-      setWeightError("La ponderación debe estar entre 0 y 100.");
+      setWeightError(strings.editEvaluation.weightRangeError);
       hasError = true;
     } else {
       setWeightError(undefined);
@@ -113,7 +106,9 @@ export default function EditEvaluationScreen() {
         parsedGrade < MIN_GRADE ||
         parsedGrade > MAX_GRADE)
     ) {
-      setGradeError(`La nota debe estar entre ${MIN_GRADE} y ${MAX_GRADE}.`);
+      setGradeError(
+        strings.editEvaluation.gradeRangeError(MIN_GRADE, MAX_GRADE),
+      );
       hasError = true;
     } else {
       setGradeError(undefined);
@@ -140,24 +135,26 @@ export default function EditEvaluationScreen() {
       setSaveError(
         error instanceof Error
           ? error.message
-          : "No se pudo guardar los cambios de la evaluación.",
+          : strings.editEvaluation.saveFailed,
       );
     }
   };
 
   return (
     <AppScreen scrollable>
-      <Stack.Screen options={{ title: "Editar evaluación" }} />
+      <Stack.Screen options={{ title: strings.editEvaluation.stackTitle }} />
       <View style={styles.container}>
         {isLoading ? (
-          <AppCard title="Cargando evaluación...">
-            <AppText tone="secondary">Espera un momento.</AppText>
+          <AppCard title={strings.editEvaluation.loadingTitle}>
+            <AppText tone="secondary">
+              {strings.editEvaluation.waitMessage}
+            </AppText>
           </AppCard>
         ) : loadError ? (
-          <AppCard title="No disponible">
+          <AppCard title={strings.editEvaluation.unavailableTitle}>
             <AppText tone="secondary">{loadError}</AppText>
             <AppButton
-              label="Volver"
+              label={strings.common.back}
               variant="outline"
               style={styles.backButton}
               onPress={() => router.back()}
@@ -166,32 +163,34 @@ export default function EditEvaluationScreen() {
         ) : (
           <>
             <View style={styles.headerSection}>
-              <AppText variant="title">Editar evaluación</AppText>
+              <AppText variant="title">
+                {strings.editEvaluation.headerTitle}
+              </AppText>
               <AppText tone="secondary">
-                Actualiza nombre, nota y ponderación para este ramo.
+                {strings.editEvaluation.headerDescription}
               </AppText>
             </View>
 
-            <AppCard title="Datos de la evaluación">
+            <AppCard title={strings.editEvaluation.dataTitle}>
               <AppInput
-                label="Nombre"
+                label={strings.editEvaluation.nameLabel}
                 value={name}
                 onChangeText={setName}
-                placeholder="Ej: Prueba 1"
+                placeholder={strings.editEvaluation.namePlaceholder}
                 error={nameError}
               />
 
               <AppInput
-                label="Ponderación (%)"
+                label={strings.editEvaluation.weightLabel}
                 value={weight}
                 onChangeText={setWeight}
-                placeholder="Ej: 30"
+                placeholder={strings.editEvaluation.weightPlaceholder}
                 keyboardType="decimal-pad"
                 error={weightError}
               />
 
               <AppInput
-                label="Nota (vacía = pendiente)"
+                label={strings.editEvaluation.gradeLabel}
                 value={grade}
                 onChangeText={setGrade}
                 placeholder=""
@@ -208,12 +207,16 @@ export default function EditEvaluationScreen() {
 
             <View style={styles.actionsRow}>
               <AppButton
-                label={isSaving ? "Guardando..." : "Guardar cambios"}
+                label={
+                  isSaving
+                    ? strings.editEvaluation.saving
+                    : strings.editEvaluation.saveChanges
+                }
                 style={styles.actionButton}
                 onPress={() => void handleSave()}
               />
               <AppButton
-                label="Cancelar"
+                label={strings.common.cancel}
                 variant="outline"
                 style={styles.actionButton}
                 onPress={() => router.back()}

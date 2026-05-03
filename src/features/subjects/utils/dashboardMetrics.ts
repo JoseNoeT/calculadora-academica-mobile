@@ -36,6 +36,8 @@ export type SubjectDashboardMetrics = {
   trendPoints: number[];
   alerts: DashboardAlert[];
   featuredSubjects: FeaturedSubject[];
+  perSubjectEvaluationCounts: Record<string, number>;
+  perSubjectStatuses: Record<string, AcademicStatus>;
 };
 
 function round2(value: number): number {
@@ -89,7 +91,7 @@ const EMPTY_METRICS: SubjectDashboardMetrics = {
     pendingWeight: 0,
   }),
   trendDirection: "flat",
-  trendPoints: [8, 14, 22, 16, 28, 34],
+  trendPoints: [],
   alerts: [
     {
       id: "no-subjects",
@@ -98,6 +100,8 @@ const EMPTY_METRICS: SubjectDashboardMetrics = {
     },
   ],
   featuredSubjects: [],
+  perSubjectEvaluationCounts: {},
+  perSubjectStatuses: {},
 };
 
 export async function buildSubjectDashboardMetrics(
@@ -192,9 +196,11 @@ export async function buildSubjectDashboardMetrics(
     .map((item) => Math.max(0, Math.min(100, Math.round(item.completedWeight))))
     .slice(0, 6);
 
-  const trendPoints =
-    trendPointsRaw.length > 0 ? trendPointsRaw : [10, 20, 14, 24, 32, 40];
-  const trendDelta = trendPoints[trendPoints.length - 1] - trendPoints[0];
+  const trendPoints = trendPointsRaw;
+  const trendDelta =
+    trendPoints.length >= 2
+      ? trendPoints[trendPoints.length - 1] - trendPoints[0]
+      : 0;
   const trendDirection =
     trendDelta >= 5 ? "up" : trendDelta <= -5 ? "down" : "flat";
 
@@ -267,6 +273,13 @@ export async function buildSubjectDashboardMetrics(
       pendingEvaluations: item.pendingEvaluations,
     }));
 
+  const perSubjectEvaluationCounts = Object.fromEntries(
+    subjectData.map((item) => [item.id, item.evaluationsCount]),
+  );
+  const perSubjectStatuses = Object.fromEntries(
+    subjectData.map((item) => [item.id, item.status]),
+  );
+
   return {
     totalSubjects: subjects.length,
     subjectsWithEvaluations,
@@ -281,5 +294,7 @@ export async function buildSubjectDashboardMetrics(
     trendPoints,
     alerts,
     featuredSubjects,
+    perSubjectEvaluationCounts,
+    perSubjectStatuses,
   };
 }

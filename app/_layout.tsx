@@ -19,9 +19,11 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import "react-native-reanimated";
 
 import { AnimatedSplash } from "@/src/components/splash/AnimatedSplash";
+import { strings } from "@/src/constants/strings";
 import { ThemeProvider as AppThemeProvider, useAppTheme } from "@/src/theme";
 
 // Prevent the native splash from auto-hiding before fonts + theme are ready.
@@ -54,27 +56,27 @@ function AppContent({ fontsLoaded }: { fontsLoaded: boolean }) {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
           name="subjects/create"
-          options={{ title: "Agregar ramo" }}
+          options={{ title: strings.createSubject.headerTitle }}
         />
         <Stack.Screen
           name="subjects/[id]/index"
-          options={{ title: "Detalle del ramo" }}
+          options={{ title: strings.subjectDetail.stackTitle }}
         />
         <Stack.Screen
           name="subjects/[id]/create-evaluation"
-          options={{ title: "Agregar evaluación" }}
+          options={{ title: strings.createEvaluation.stackTitle }}
         />
         <Stack.Screen
           name="subjects/[id]/evaluations/[evaluationId]/edit"
-          options={{ title: "Editar evaluación" }}
+          options={{ title: strings.editEvaluation.stackTitle }}
         />
         <Stack.Screen
           name="subjects/[id]/edit"
-          options={{ title: "Editar ramo" }}
+          options={{ title: strings.editSubject.stackTitle }}
         />
         <Stack.Screen
           name="modal"
-          options={{ presentation: "modal", title: "Modal" }}
+          options={{ presentation: "modal", title: strings.modal.title }}
         />
       </Stack>
       <StatusBar style={theme.mode === "dark" ? "light" : "dark"} />
@@ -116,8 +118,10 @@ export default function RootLayout() {
   });
 
   return (
-    <AppThemeProvider>
-      <AppContent fontsLoaded={fontsLoaded} />
-    </AppThemeProvider>
+    <SafeAreaProvider>
+      <AppThemeProvider>
+        <AppContent fontsLoaded={fontsLoaded} />
+      </AppThemeProvider>
+    </SafeAreaProvider>
   );
 }

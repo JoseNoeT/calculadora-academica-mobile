@@ -8,57 +8,58 @@ type AppHeaderProps = {
   title?: string;
   subtitle?: string;
   hideSettingsAction?: boolean;
+  compact?: boolean;
 };
 
 function resolveHeaderCopy(pathname: string): {
   title: string;
   subtitle: string;
 } {
-  if (pathname === "/") {
+  if (pathname === "/" || pathname.endsWith("/index")) {
     return {
       title: "Inicio",
-      subtitle: "Tu avance academico en claro",
+      subtitle: "Tu avance académico",
     };
   }
 
-  if (pathname === "/subjects") {
-    return {
-      title: "Mis ramos",
-      subtitle: "Organiza y sigue tu progreso",
-    };
-  }
-
-  if (pathname === "/calculator/quick") {
+  if (pathname.endsWith("/calculator/quick")) {
     return {
       title: "Calculadora",
-      subtitle: "Calculo rapido y preciso",
+      subtitle: "Calcula tu escenario",
     };
   }
 
-  if (/^\/subjects\/[^/]+$/.test(pathname)) {
+  if (/\/subjects\/[^/]+$/.test(pathname)) {
     return {
       title: "Detalle del ramo",
-      subtitle: "Metricas y evaluaciones del ramo",
+      subtitle: "Métricas y evaluaciones del ramo",
     };
   }
 
-  if (pathname === "/simulator") {
+  if (pathname.endsWith("/subjects")) {
+    return {
+      title: "Ramos",
+      subtitle: "Tus asignaturas",
+    };
+  }
+
+  if (pathname.endsWith("/simulator")) {
     return {
       title: "Simulador",
-      subtitle: "Proyecciones sin alterar tus datos",
+      subtitle: "Proyecciones académicas",
     };
   }
 
-  if (pathname === "/settings") {
+  if (pathname.endsWith("/settings")) {
     return {
-      title: "Configuracion",
-      subtitle: "Personaliza tu experiencia",
+      title: "Configuración",
+      subtitle: "Ajustes de la app",
     };
   }
 
   return {
-    title: "Academica",
-    subtitle: "Tu avance academico en claro",
+    title: "Académica",
+    subtitle: "Tu avance académico",
   };
 }
 
@@ -66,6 +67,7 @@ export function AppHeader({
   title,
   subtitle,
   hideSettingsAction = false,
+  compact = false,
 }: AppHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -78,8 +80,6 @@ export function AppHeader({
   const isSettingsRoute = pathname === "/settings";
   const shouldShowSettingsAction = !hideSettingsAction && !isSettingsRoute;
 
-  const headerBackground =
-    theme.mode === "dark" ? "rgba(30, 41, 59, 0.98)" : theme.surface;
   const headerBorder =
     theme.mode === "dark"
       ? "rgba(148, 163, 184, 0.4)"
@@ -91,11 +91,10 @@ export function AppHeader({
     <View
       style={[
         styles.container,
+        compact && styles.containerCompact,
         {
-          backgroundColor: headerBackground,
+          backgroundColor: theme.background,
           borderColor: headerBorder,
-          shadowOpacity: theme.mode === "dark" ? 0.2 : 0.08,
-          elevation: theme.mode === "dark" ? 4 : 2,
         },
       ]}
     >
@@ -104,6 +103,7 @@ export function AppHeader({
           <View
             style={[
               styles.logoBubble,
+              compact && styles.logoBubbleCompact,
               {
                 backgroundColor: iconSurface,
                 borderColor:
@@ -113,26 +113,34 @@ export function AppHeader({
               },
             ]}
           >
-            <AppText style={styles.logoIcon}>🎓</AppText>
+            <AppText style={[styles.logoIcon, compact && styles.logoIconCompact]}>
+              🎓
+            </AppText>
           </View>
 
           <View style={styles.textStack}>
             <AppText
-              variant="h2"
+              variant="navTitle"
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.82}
-              style={[styles.brandName, { color: theme.textPrimary }]}
+              style={[
+                styles.brandName,
+                compact && styles.brandNameCompact,
+                { color: theme.textPrimary },
+              ]}
             >
               {resolvedTitle}
             </AppText>
-            <AppText
-              variant="caption"
-              style={[styles.brandSubtitle, { color: theme.textPrimary }]}
-              numberOfLines={2}
-            >
-              {resolvedSubtitle}
-            </AppText>
+            {!compact && (
+              <AppText
+                variant="navSubtitle"
+                style={[styles.brandSubtitle, { color: theme.textPrimary }]}
+                numberOfLines={2}
+              >
+                {resolvedSubtitle}
+              </AppText>
+            )}
           </View>
         </View>
 
@@ -160,18 +168,23 @@ export function AppHeader({
 
 const styles = StyleSheet.create({
   container: {
-    borderWidth: 1,
-    borderRadius: 20,
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md + 2,
-    minHeight: 88,
-    justifyContent: "center",
+    borderRadius: 0,
+    borderWidth: 0,
     borderBottomWidth: 1,
-    shadowColor: "#000",
-    shadowRadius: 9,
-    shadowOffset: { width: 0, height: 3 },
+    marginTop: 0,
+    marginBottom: 0,
+    marginHorizontal: -spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
+    minHeight: 68,
+    justifyContent: "center",
+  },
+  containerCompact: {
+    borderRadius: 14,
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+    paddingVertical: spacing.sm,
+    minHeight: 54,
   },
   contentRow: {
     flexDirection: "row",
@@ -186,16 +199,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logoBubble: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
+  logoBubbleCompact: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+  },
   logoIcon: {
-    fontSize: 22,
-    lineHeight: 26,
+    fontSize: 19,
+    lineHeight: 22,
+  },
+  logoIconCompact: {
+    fontSize: 17,
+    lineHeight: 20,
   },
   textStack: {
     flex: 1,
@@ -204,23 +226,17 @@ const styles = StyleSheet.create({
   },
   brandName: {
     marginRight: spacing.xs,
-    fontFamily: "Syne_800ExtraBold",
-    fontSize: 22,
-    lineHeight: 29,
-    letterSpacing: 0.1,
-    transform: [{ scaleX: 0.93 }],
+    transform: [{ scaleX: 1 }],
   },
+  brandNameCompact: {},
   brandSubtitle: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: 13.5,
-    lineHeight: 19,
-    opacity: 0.74,
-    transform: [{ scaleX: 0.95 }],
+    opacity: 0.58,
+    transform: [{ scaleX: 1 }],
   },
   actionButton: {
     width: 44,
     height: 44,
-    borderRadius: 14,
+    borderRadius: 22,
     borderWidth: 1.2,
     alignItems: "center",
     justifyContent: "center",

@@ -1,9 +1,10 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { Alert, Platform, ScrollView, StyleSheet, View } from "react-native";
 
-import { AppHeader } from "@/src/components/layout/AppHeader";
+import { AcademicSummaryPanel } from "@/src/components/academic";
+import { AppScreenHeader } from "@/src/components/layout/AppScreenHeader";
 import {
     AppBadge,
     AppButton,
@@ -11,10 +12,6 @@ import {
     AppScreen,
     AppText,
 } from "@/src/components/ui";
-import {
-    academicStatusLabels,
-    type AcademicStatus,
-} from "@/src/domain/entities";
 import { calculateAcademicSummary } from "@/src/features/calculator/utils/academicCalculator";
 import {
     deleteEvaluation,
@@ -27,27 +24,6 @@ import {
 import type { EvaluationListItem } from "@/src/features/subjects/types/evaluation.types";
 import type { SubjectListItem } from "@/src/features/subjects/types/subject.types";
 import { spacing, useAppTheme } from "@/src/theme";
-import type { AppTheme } from "@/src/theme/themes/theme.types";
-
-function getStatusColor(theme: AppTheme, status: AcademicStatus): string {
-  switch (status) {
-    case "pending":
-      return theme.academic.pending;
-    case "approved":
-    case "favorable":
-      return theme.academic.approved;
-    case "achievable":
-      return theme.academic.achievable;
-    case "atRisk":
-      return theme.academic.atRisk;
-    case "notAchievable":
-      return theme.academic.notAchievable;
-    case "failed":
-      return theme.academic.failed;
-    default:
-      return theme.textSecondary;
-  }
-}
 
 export default function SubjectDetailScreen() {
   const { theme } = useAppTheme();
@@ -84,18 +60,6 @@ export default function SubjectDetailScreen() {
     });
   }, [subject, evaluations]);
 
-  const summaryStatusColor = summary
-    ? getStatusColor(theme, summary.status)
-    : theme.textSecondary;
-
-  const completedProgress = summary
-    ? Math.max(0, Math.min(100, summary.completedWeight))
-    : 0;
-
-  const pendingProgress = summary
-    ? Math.max(0, Math.min(100, summary.pendingWeight))
-    : 0;
-
   const handleAddEvaluation = () => {
     router.push(`/subjects/${params.id}/create-evaluation` as never);
   };
@@ -111,21 +75,52 @@ export default function SubjectDetailScreen() {
   };
 
   const handleDeleteEvaluation = (evaluation: EvaluationListItem) => {
-    Alert.alert(
-      "Eliminar evaluación",
-      `¿Eliminar "${evaluation.name}"? Esta acción no se puede deshacer.`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Eliminar",
-          style: "destructive",
-          onPress: async () => {
-            await deleteEvaluation(evaluation.id);
-            void loadData();
+    console.log("[DeleteEvaluation] Handler iniciado", evaluation.id);
+
+    const performDelete = async () => {
+      console.log("[DeleteEvaluation] Confirmado", evaluation.id);
+      try {
+        await deleteEvaluation(evaluation.id);
+        console.log("[DeleteEvaluation] Eliminación ejecutada", evaluation.id);
+        setEvaluations((current) =>
+          current.filter((item) => item.id !== evaluation.id),
+        );
+        await loadData();
+        console.log("[DeleteEvaluation] Datos recargados");
+      } catch (error) {
+        console.error("[DeleteEvaluation] Error:", error);
+        setTimeout(() => {
+          Alert.alert(
+            "Error",
+            "No se pudo eliminar la evaluación. Inténtalo nuevamente.",
+          );
+        }, 300);
+      }
+    };
+
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(
+        `¿Eliminar "${evaluation.name}"? Esta acción no se puede deshacer.`,
+      );
+      if (confirmed) {
+        void performDelete();
+      }
+    } else {
+      Alert.alert(
+        "Eliminar evaluación",
+        `¿Eliminar "${evaluation.name}"? Esta acción no se puede deshacer.`,
+        [
+          { text: "Cancelar", style: "cancel" },
+          {
+            text: "Eliminar",
+            style: "destructive",
+            onPress: () => {
+              void performDelete();
+            },
           },
-        },
-      ],
-    );
+        ],
+      );
+    }
   };
 
   const handleDeleteSubject = () => {
@@ -160,259 +155,79 @@ export default function SubjectDetailScreen() {
   };
 
   return (
-    <AppScreen scrollable>
-      <Stack.Screen options={{ title: subject?.name ?? "Detalle del ramo" }} />
-      <View style={styles.container}>
-        <AppHeader />
-
+    <AppScreen padded={false}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={styles.headerZone}>
+        <AppScreenHeader backLabel="Ramos" />
+      </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <View style={styles.container}>
         {subject ? (
           <>
-            <View style={styles.headerSection}>
-              <AppBadge label="Detalle del ramo" tone="info" />
-              <AppText variant="h1" align="center" numberOfLines={2}>
-                {subject.name}
-              </AppText>
-              <AppText variant="body" tone="secondary" align="center">
-                Controla tus evaluaciones y avance académico en este ramo.
-              </AppText>
-            </View>
-
-            <AppCard title="Resumen del ramo" variant="elevated" showTopAccent>
-              <View style={styles.rowBetween}>
-                <AppText variant="label" tone="secondary">
-                  Nota mínima
-                </AppText>
-                <AppText variant="h3">
-                  {subject.minimumGrade.toFixed(1)}
-                </AppText>
-              </View>
-              <View style={styles.rowBetween}>
-                <AppText variant="label" tone="secondary">
-                  Color
-                </AppText>
+            <AppCard variant="elevated" showTopAccent>
+              <View style={styles.heroIdentityRow}>
                 <View
                   style={[
-                    styles.colorDot,
-                    {
-                      backgroundColor: subject.color,
-                      borderColor: theme.border,
-                    },
+                    styles.heroColorDot,
+                    { backgroundColor: subject.color, borderColor: theme.border },
                   ]}
                 />
+                <AppText
+                  variant="h2"
+                  numberOfLines={2}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.82}
+                  style={styles.heroName}
+                >
+                  {subject.name}
+                </AppText>
               </View>
-              <AppButton
-                label="Editar ramo"
-                variant="outline"
-                style={styles.editSubjectButton}
-                onPress={handleEditSubject}
-              />
+              <View style={styles.heroActionsRow}>
+                <AppBadge
+                  label={`Nota mín. ${subject.minimumGrade.toFixed(1)}`}
+                  tone="info"
+                />
+                <AppButton
+                  label="Editar ramo"
+                  variant="outline"
+                  style={styles.heroEditButton}
+                  onPress={handleEditSubject}
+                />
+              </View>
             </AppCard>
 
             {summary ? (
               <>
-                <AppCard title="Resumen académico" variant="elevated">
-                  <View
-                    style={[
-                      styles.mainStatusCard,
-                      {
-                        backgroundColor: theme.surfaceElevated,
-                        borderColor: summaryStatusColor,
-                      },
-                    ]}
-                  >
-                    <AppText variant="caption" tone="secondary">
-                      Estado académico
-                    </AppText>
-                    <AppBadge
-                      label={academicStatusLabels[summary.status]}
-                      tone={
-                        summary.status === "approved" ||
-                        summary.status === "favorable"
-                          ? "success"
-                          : summary.status === "atRisk" ||
-                              summary.status === "notAchievable" ||
-                              summary.status === "failed"
-                            ? "danger"
-                            : summary.status === "pending"
-                              ? "pending"
-                              : "info"
-                      }
-                    />
-                  </View>
-
-                  <View style={styles.metricGrid}>
-                    <View
-                      style={[
-                        styles.metricCard,
-                        {
-                          backgroundColor: theme.surfaceElevated,
-                          borderColor: theme.border,
-                        },
-                      ]}
-                    >
-                      <AppText variant="caption" tone="secondary">
-                        Promedio actual
-                      </AppText>
-                      <AppText variant="metric">
-                        {summary.currentAverage != null
-                          ? summary.currentAverage.toFixed(2)
-                          : "Sin notas todavía"}
-                      </AppText>
-                    </View>
-
-                    <View
-                      style={[
-                        styles.metricCard,
-                        {
-                          backgroundColor: theme.surfaceElevated,
-                          borderColor: theme.border,
-                        },
-                      ]}
-                    >
-                      <AppText variant="caption" tone="secondary">
-                        Nota necesaria
-                      </AppText>
-                      <AppText variant="metric">
-                        {summary.requiredGrade != null
-                          ? summary.requiredGrade.toFixed(2)
-                          : summary.pendingWeight > 0
-                            ? "Pendiente de cálculo"
-                            : "Sin pendientes"}
-                      </AppText>
-                    </View>
-
-                    <View
-                      style={[
-                        styles.metricCard,
-                        {
-                          backgroundColor: theme.surfaceElevated,
-                          borderColor: theme.border,
-                        },
-                      ]}
-                    >
-                      <AppText variant="caption" tone="secondary">
-                        Ponderación rendida
-                      </AppText>
-                      <AppText variant="h3">
-                        {summary.completedWeight.toFixed(2)}%
-                      </AppText>
-                    </View>
-
-                    <View
-                      style={[
-                        styles.metricCard,
-                        {
-                          backgroundColor: theme.surfaceElevated,
-                          borderColor: theme.border,
-                        },
-                      ]}
-                    >
-                      <AppText variant="caption" tone="secondary">
-                        Ponderación pendiente
-                      </AppText>
-                      <AppText variant="h3">
-                        {summary.pendingWeight.toFixed(2)}%
-                      </AppText>
-                    </View>
-
-                    <View
-                      style={[
-                        styles.metricCard,
-                        {
-                          backgroundColor: theme.surfaceElevated,
-                          borderColor: theme.border,
-                        },
-                      ]}
-                    >
-                      <AppText variant="caption" tone="secondary">
-                        Puntos acumulados
-                      </AppText>
-                      <AppText variant="h3">
-                        {summary.accumulatedPoints.toFixed(2)}
-                      </AppText>
-                    </View>
-                  </View>
-
-                  <View style={styles.progressSection}>
-                    <View style={styles.rowBetween}>
-                      <AppText variant="caption" tone="secondary">
-                        Progreso rendido
-                      </AppText>
-                      <AppText variant="caption">
-                        {summary.completedWeight.toFixed(2)}%
-                      </AppText>
-                    </View>
-                    <View
-                      style={[
-                        styles.progressTrack,
-                        { backgroundColor: theme.border },
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.progressFill,
-                          {
-                            width: `${completedProgress}%`,
-                            backgroundColor: theme.primary,
-                          },
-                        ]}
-                      />
-                    </View>
-
-                    <View
-                      style={[styles.rowBetween, styles.pendingProgressRow]}
-                    >
-                      <AppText variant="caption" tone="secondary">
-                        Progreso pendiente
-                      </AppText>
-                      <AppText variant="caption">
-                        {summary.pendingWeight.toFixed(2)}%
-                      </AppText>
-                    </View>
-                    <View
-                      style={[
-                        styles.progressTrack,
-                        { backgroundColor: theme.border },
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.progressFill,
-                          {
-                            width: `${pendingProgress}%`,
-                            backgroundColor: theme.academic.atRisk,
-                          },
-                        ]}
-                      />
-                    </View>
-                  </View>
-                </AppCard>
-
-                <AppCard
-                  title="Consejo académico"
-                  variant="accent"
-                  accentTone={
-                    summary.status === "atRisk" ||
-                    summary.status === "notAchievable" ||
-                    summary.status === "failed"
-                      ? "warm"
-                      : "cool"
+                <AcademicSummaryPanel
+                  accumulatedPoints={summary.accumulatedPoints}
+                  currentWeightedAverage={summary.currentAverage}
+                  completedWeight={summary.completedWeight}
+                  pendingWeight={summary.pendingWeight}
+                  requiredGrade={summary.requiredGrade}
+                  finalProjectedGrade={
+                    summary.pendingWeight <= 0 ? summary.currentAverage : null
                   }
-                >
-                  <View
-                    style={[
-                      styles.adviceCard,
-                      {
-                        borderColor: summaryStatusColor,
-                        backgroundColor: theme.surface,
-                      },
-                    ]}
-                  >
-                    <AppText variant="body" tone="secondary">
-                      {summary.advice}
-                    </AppText>
-                  </View>
-                </AppCard>
+                  finalProjectedGradeLabel={
+                    summary.pendingWeight <= 0
+                      ? summary.currentAverage != null
+                        ? summary.currentAverage.toFixed(2)
+                        : "Sin notas"
+                      : "Pendiente"
+                  }
+                  requiredGradeLabel={
+                    summary.requiredGrade != null
+                      ? summary.requiredGrade.toFixed(2)
+                      : summary.pendingWeight > 0
+                        ? "Pendiente de cálculo"
+                        : "Sin pendientes"
+                  }
+                  status={summary.status}
+                  advice={summary.advice}
+                  minimumGrade={subject.minimumGrade}
+                />
               </>
             ) : null}
 
@@ -425,6 +240,28 @@ export default function SubjectDetailScreen() {
               }
               variant="elevated"
             >
+              {summary ? (
+                <View style={styles.weightNoticeContainer}>
+                  <AppText variant="caption" tone="secondary">
+                    {(() => {
+                      const totalAssigned =
+                        summary.completedWeight + summary.pendingWeight;
+                      const unassigned = 100 - totalAssigned;
+
+                      if (totalAssigned < 100) {
+                        return `Tus evaluaciones suman ${totalAssigned.toFixed(2)}%. Falta asignar ${unassigned.toFixed(2)}%.`;
+                      }
+
+                      if (totalAssigned === 100) {
+                        return "Las ponderaciones completan 100%.";
+                      }
+
+                      return `Tus evaluaciones superan el 100% por ${(totalAssigned - 100).toFixed(2)}%.`;
+                    })()}
+                  </AppText>
+                </View>
+              ) : null}
+
               {evaluations.length === 0 ? (
                 <View style={styles.emptyStateCard}>
                   <AppText variant="body" tone="secondary">
@@ -487,9 +324,10 @@ export default function SubjectDetailScreen() {
                           label="Eliminar"
                           variant="outline"
                           style={styles.evaluationDeleteButton}
-                          onPress={() =>
-                            void handleDeleteEvaluation(evaluation)
-                          }
+                          onPress={() => {
+                            console.log("[DeleteEvaluation] Botón presionado", evaluation.id);
+                            handleDeleteEvaluation(evaluation);
+                          }}
                         />
                       </View>
                     </AppCard>
@@ -527,71 +365,52 @@ export default function SubjectDetailScreen() {
             </AppText>
           </AppCard>
         )}
-      </View>
+        </View>
+      </ScrollView>
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  headerZone: {
+    paddingHorizontal: spacing.lg,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
   container: {
     gap: spacing.xxl,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
-  headerSection: {
+  heroIdentityRow: {
+    flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
-    paddingHorizontal: spacing.sm,
+    gap: spacing.md,
+  },
+  heroColorDot: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    borderWidth: 2,
+    flexShrink: 0,
+  },
+  heroName: {
+    flex: 1,
+  },
+  heroActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: spacing.sm,
+  },
+  heroEditButton: {
+    minHeight: 40,
   },
   rowBetween: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-  },
-  colorDot: {
-    width: 16,
-    height: 16,
-    borderWidth: 1,
-    borderRadius: 999,
-  },
-  mainStatusCard: {
-    borderRadius: 12,
-    borderWidth: 1.5,
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  metricGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  metricCard: {
-    width: "48%",
-    minHeight: 110,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  progressSection: {
-    marginTop: spacing.sm,
-    gap: spacing.xs,
-  },
-  pendingProgressRow: {
-    marginTop: spacing.xs,
-  },
-  progressTrack: {
-    height: 8,
-    borderRadius: 999,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 999,
-  },
-  adviceCard: {
-    borderRadius: 12,
-    borderWidth: 1.5,
-    padding: spacing.md,
   },
   evaluationsList: {
     gap: spacing.sm,
@@ -624,15 +443,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     minHeight: 50,
   },
+  weightNoticeContainer: {
+    marginBottom: spacing.sm,
+  },
   deleteSubjectButton: {
     marginTop: spacing.sm,
     minHeight: 50,
     borderWidth: 1,
     borderColor: "#D14343",
-  },
-  editSubjectButton: {
-    marginTop: spacing.sm,
-    minHeight: 50,
   },
   emptyStateCard: {
     paddingVertical: spacing.sm,
