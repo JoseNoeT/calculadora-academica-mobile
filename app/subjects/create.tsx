@@ -11,10 +11,16 @@ import {
     AppText,
 } from "@/src/components/ui";
 import { strings } from "@/src/constants/strings";
-import { MAX_GRADE, MIN_GRADE } from "@/src/domain/rules";
+import type { AcademicProfileId } from "@/src/domain/types";
+import {
+  ACADEMIC_CALCULATION_PROFILES,
+  MAX_GRADE,
+  MIN_GRADE,
+} from "@/src/domain/rules";
 import { parseAcademicNumber } from "@/src/domain/utils/parseAcademicNumber";
 import {
     createSubject,
+  getDefaultAcademicProfileId,
     getSubjects,
 } from "@/src/features/subjects/services/subjectService";
 import { spacing, useAppTheme } from "@/src/theme";
@@ -31,6 +37,8 @@ export default function CreateSubjectScreen() {
   const [subjectName, setSubjectName] = useState("");
   const [passingGrade, setPassingGrade] = useState("4.0");
   const [selectedColorId, setSelectedColorId] = useState(SUBJECT_COLORS[0].id);
+  const [selectedAcademicProfileId, setSelectedAcademicProfileId] =
+    useState<AcademicProfileId>("weighted_general");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | undefined>(undefined);
   const [passingGradeError, setPassingGradeError] = useState<
@@ -39,15 +47,21 @@ export default function CreateSubjectScreen() {
 
   useEffect(() => {
     const initDefaultColor = async () => {
-      const subjects = await getSubjects();
+      const [subjects, defaultAcademicProfileId] = await Promise.all([
+        getSubjects(),
+        getDefaultAcademicProfileId(),
+      ]);
       const usedColorValues = subjects.map((s) => s.color);
       const defaultColor = assignSubjectColor(usedColorValues);
       setSelectedColorId(defaultColor.id);
+      setSelectedAcademicProfileId(defaultAcademicProfileId);
     };
     void initDefaultColor();
   }, []);
 
   const selectedColor = getSubjectColorById(selectedColorId);
+  const selectedAcademicProfileLabel =
+    ACADEMIC_CALCULATION_PROFILES[selectedAcademicProfileId].name;
 
   const handleSave = async () => {
     const normalizedName = subjectName.trim();
@@ -85,6 +99,7 @@ export default function CreateSubjectScreen() {
         name: normalizedName,
         minimumGrade: parsedMinimumGrade!,
         color: selectedColor.background,
+        academicProfileId: selectedAcademicProfileId,
       });
 
       setSaveMessage(strings.createSubject.savedMessage);
@@ -129,6 +144,24 @@ export default function CreateSubjectScreen() {
             keyboardType="decimal-pad"
             error={passingGradeError}
           />
+
+          <View
+            style={[
+              styles.academicSystemSection,
+              {
+                borderColor: theme.border,
+                backgroundColor: theme.surface,
+              },
+            ]}
+          >
+            <AppText variant="caption" tone="secondary">
+              {strings.createSubject.academicSystemTitle}
+            </AppText>
+            <AppText variant="h3">{selectedAcademicProfileLabel}</AppText>
+            <AppText variant="caption" tone="secondary">
+              {strings.createSubject.academicSystemDescription}
+            </AppText>
+          </View>
 
           <View style={styles.colorSection}>
             <AppText variant="caption">
@@ -223,6 +256,12 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   colorSection: {
+    gap: spacing.sm,
+  },
+  academicSystemSection: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: spacing.md,
     gap: spacing.sm,
   },
   colorGrid: {

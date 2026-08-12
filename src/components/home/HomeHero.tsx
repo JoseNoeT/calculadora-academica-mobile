@@ -179,7 +179,7 @@ export function HomeHero({
               tone="info"
             />
             <AnimatedStatCard
-              label="Evaluaciones"
+              label="Ramos con evaluaciones"
               value={`${subjectsWithEvaluations}`}
               delay={70}
             />

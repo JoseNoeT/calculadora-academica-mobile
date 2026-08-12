@@ -239,6 +239,9 @@ export const strings = {
     subjectNamePlaceholder: "Ej: Matemáticas I",
     passingGradeLabel: "Nota mínima de aprobación",
     passingGradePlaceholder: "4.0",
+    academicSystemTitle: "Sistema académico",
+    academicSystemDescription:
+      "Este sistema viene desde tu configuración académica y se aplicará solo a este ramo.",
     colorIdentifier: "Color identificador del ramo",
     whyCreateTitle: "¿Por qué crear un ramo?",
     whyCreateDescription:
@@ -318,7 +321,7 @@ export const strings = {
   },
   home: {
     defaultInfoMessage:
-      "Comienza creando tu primer ramo para activar el dashboard.",
+      "Comienza creando tu primer ramo para activar el panel.",
     currentSituationTitle: "Tu situación actual",
     currentAverage: "Promedio actual",
     subjectCount: "Cantidad de ramos",
@@ -329,8 +332,8 @@ export const strings = {
     critical: "Crítica",
     attention: "Atención",
     positive: "Positivo",
-    info: "Info",
-    insightsTitle: "Insights",
+    info: "Información",
+    insightsTitle: "Análisis",
     risk: "Riesgo",
     nextActionsTitle: "Próximas acciones",
     trendTitle: "Tendencia",
@@ -348,10 +351,22 @@ export const strings = {
       "Aún no hay notas registradas para calcular un pulso real.",
     pulseNoSubjects:
       "Crea tu primer ramo para activar indicadores con datos reales.",
-    featuredSubjectsTitle: "Tus ramos",
-    featuredSubjectsSubtitle: "Destacados por prioridad académica",
+    featuredSubjectsTitle: "Ramos prioritarios",
+    featuredSubjectsSubtitle: (visibleCount: number, totalCount: number) => {
+      if (totalCount <= 0) {
+        return "Sin ramos registrados aún.";
+      }
+
+      if (totalCount <= 3) {
+        const noun = totalCount === 1 ? "ramo" : "ramos";
+        return `Mostrando ${visibleCount} de ${totalCount} ${noun}.`;
+      }
+
+      return `Mostrando 3 de ${totalCount} ramos destacados por urgencia académica.`;
+    },
     emptyFeaturedSubjects:
       "Aún no hay ramos para destacar. Crea tu primer ramo y comienza a construir tu panel.",
+    viewAllSubjects: "Ver todos los ramos",
     averagePrefix: "Promedio:",
     pendingPrefix: "Pendientes:",
   },

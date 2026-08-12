@@ -31,7 +31,7 @@ import {
     buildSubjectDashboardMetrics,
     type SubjectDashboardMetrics,
 } from "@/src/features/subjects/utils/dashboardMetrics";
-import { spacing } from "@/src/theme";
+import { spacing, useAppTheme } from "@/src/theme";
 
 function getStatusTone(
   status: AcademicStatus,
@@ -56,6 +56,7 @@ function getStatusTone(
 }
 
 export default function HomeScreen() {
+  const { theme } = useAppTheme();
   const router = useRouter();
   const quickCalculatorRoute: Href = "/calculator/quick" as Href;
   const subjectsRoute: Href = "/subjects" as Href;
@@ -144,6 +145,11 @@ export default function HomeScreen() {
   const alertsAccentTone = homeAlerts.some((alert) => alert.tone === "danger")
     ? "warm"
     : "cool";
+  const featuredSubjectsCount = heroMetrics.featuredSubjects.length;
+  const featuredSubjectsSubtitle = strings.home.featuredSubjectsSubtitle(
+    featuredSubjectsCount,
+    heroMetrics.totalSubjects,
+  );
 
   const handleActionPress = (
     routeKey: "subjects-create" | "subjects" | "simulator" | "calculator",
@@ -172,10 +178,10 @@ export default function HomeScreen() {
         {!hasSubjects ? (
           <AppCard variant="glass" showTopAccent>
             <View style={styles.welcomeContainer}>
-              <AppText variant="h2">Bienvenido a tu panel academico</AppText>
+              <AppText variant="h2">Bienvenido a tu panel académico</AppText>
               <AppText variant="bodySecondary">
                 Organiza tus ramos, registra evaluaciones y simula tus notas
-                para saber como vas avanzando durante el semestre.
+                para saber cómo vas avanzando durante el semestre.
               </AppText>
               <AppText variant="caption" tone="secondary">
                 Comienza creando tu primer ramo.
@@ -235,7 +241,7 @@ export default function HomeScreen() {
                 delay={120}
               />
               <AnimatedStatCard
-                label="Evaluaciones"
+                label="Evaluaciones pendientes"
                 value={`${heroMetrics.pendingEvaluations}`}
                 tone={heroMetrics.pendingEvaluations > 0 ? "info" : "success"}
                 delay={180}
@@ -264,10 +270,7 @@ export default function HomeScreen() {
                   }
                   tone={alert.tone}
                 />
-                <AppText
-                  variant="bodySecondary"
-                  style={styles.alertText}
-                >
+                <AppText variant="bodySecondary" style={styles.alertText}>
                   {alert.icon} {alert.message}
                 </AppText>
               </View>
@@ -295,10 +298,7 @@ export default function HomeScreen() {
                   }
                   tone={insight.tone}
                 />
-                <AppText
-                  variant="bodySecondary"
-                  style={styles.alertText}
-                >
+                <AppText variant="bodySecondary" style={styles.alertText}>
                   {insight.icon} {insight.text}
                 </AppText>
               </View>
@@ -322,9 +322,33 @@ export default function HomeScreen() {
                   {action.description}
                 </AppText>
                 <AppButton
-                  label={action.title}
+                  label={
+                    action.routeKey === "subjects" ? "Ver ramos" : action.title
+                  }
                   variant={
                     index === 0 ? "primary" : index === 1 ? "outline" : "ghost"
+                  }
+                  style={
+                    action.routeKey === "subjects"
+                      ? [
+                          styles.secondaryActionButton,
+                          {
+                            backgroundColor:
+                              theme.mode === "dark"
+                                ? "rgba(37,99,235,0.08)"
+                                : "rgba(37,99,235,0.06)",
+                            borderColor:
+                              theme.mode === "dark"
+                                ? "rgba(148,163,184,0.34)"
+                                : "rgba(100,116,139,0.34)",
+                          },
+                        ]
+                      : undefined
+                  }
+                  labelStyle={
+                    action.routeKey === "subjects"
+                      ? { color: theme.primary }
+                      : undefined
                   }
                   onPress={() => handleActionPress(action.routeKey)}
                 />
@@ -351,7 +375,9 @@ export default function HomeScreen() {
             </View>
           ) : !hasRealTrendData ? (
             <View style={styles.trendStateContainer}>
-              <AppText variant="h3">{strings.home.insufficientDataTitle}</AppText>
+              <AppText variant="h3">
+                {strings.home.insufficientDataTitle}
+              </AppText>
               <AppText variant="bodySecondary" tone="secondary">
                 {strings.home.insufficientDataDescription}
               </AppText>
@@ -379,9 +405,16 @@ export default function HomeScreen() {
 
         <AppCard
           title={strings.home.featuredSubjectsTitle}
-          subtitle={strings.home.featuredSubjectsSubtitle}
+          subtitle={featuredSubjectsSubtitle}
           variant="elevated"
         >
+          <AppButton
+            label={strings.home.viewAllSubjects}
+            variant="outline"
+            style={styles.featuredActionButton}
+            onPress={() => router.push(subjectsRoute)}
+          />
+
           {heroMetrics.featuredSubjects.length === 0 ? (
             <AppText variant="bodySecondary">
               {strings.home.emptyFeaturedSubjects}
@@ -466,6 +499,9 @@ const styles = StyleSheet.create({
   actionItem: {
     gap: spacing.sm,
   },
+  secondaryActionButton: {
+    minHeight: 48,
+  },
   actionButtonsRow: {
     flexDirection: "row",
     gap: spacing.sm,
@@ -487,6 +523,9 @@ const styles = StyleSheet.create({
   },
   featuredList: {
     gap: spacing.md,
+  },
+  featuredActionButton: {
+    minHeight: 44,
   },
   featuredPressable: {
     borderRadius: 12,

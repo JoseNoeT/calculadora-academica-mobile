@@ -2,6 +2,50 @@ import { getDatabase } from "./sqliteClient";
 
 let isInitialized = false;
 
+async function ensureSubjectsAcademicConfigColumn(): Promise<void> {
+  const database = await getDatabase();
+  const columns = await database.getAllAsync<{ name: string }>(
+    "PRAGMA table_info(subjects)",
+  );
+
+  const hasSubjectAcademicConfigColumn = columns.some(
+    (column) => column.name === "subject_academic_config_json",
+  );
+
+  if (!hasSubjectAcademicConfigColumn) {
+    await database.execAsync(`
+      ALTER TABLE subjects
+      ADD COLUMN subject_academic_config_json TEXT NULL;
+    `);
+  }
+}
+
+async function ensureEvaluationsCategoryColumns(): Promise<void> {
+  const database = await getDatabase();
+  const columns = await database.getAllAsync<{ name: string }>(
+    "PRAGMA table_info(evaluations)",
+  );
+
+  const hasCategoryColumn = columns.some(
+    (column) => column.name === "category",
+  );
+  const hasBlockIdColumn = columns.some((column) => column.name === "block_id");
+
+  if (!hasCategoryColumn) {
+    await database.execAsync(`
+      ALTER TABLE evaluations
+      ADD COLUMN category TEXT NULL DEFAULT 'general';
+    `);
+  }
+
+  if (!hasBlockIdColumn) {
+    await database.execAsync(`
+      ALTER TABLE evaluations
+      ADD COLUMN block_id TEXT NULL DEFAULT 'general';
+    `);
+  }
+}
+
 export async function initializeDatabase(): Promise<void> {
   if (isInitialized) {
     return;
@@ -37,6 +81,9 @@ export async function initializeDatabase(): Promise<void> {
       value TEXT NOT NULL
     );
   `);
+
+  await ensureSubjectsAcademicConfigColumn();
+  await ensureEvaluationsCategoryColumns();
 
   isInitialized = true;
 }

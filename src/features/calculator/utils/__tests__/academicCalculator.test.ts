@@ -126,6 +126,7 @@ describe("calculateStatus", () => {
   const base = {
     hasGradedEvaluations: true,
     hasPendingEvaluations: true,
+    hasIncompleteConfiguration: false,
     completedWeight: 60,
     pendingWeight: 40,
     currentAverage: null,
@@ -202,5 +203,27 @@ describe("calculateAcademicSummary", () => {
     ];
     const summary = calculateAcademicSummary({ evaluations: evals, passingGrade: 4.0 });
     expect(summary.status).toBe("failed");
+  });
+
+  it("QA-32: 90% configurado con notas no se comunica como ramo cerrado", () => {
+    const evals = [
+      makeEval({ id: "1", grade: 6.0, weight: 50, isPending: false }),
+      makeEval({ id: "2", grade: 4.0, weight: 40, isPending: false }),
+    ];
+
+    const summary = calculateAcademicSummary({
+      evaluations: evals,
+      passingGrade: 4.0,
+    });
+
+    expect(summary.completedWeight).toBe(90);
+    expect(summary.pendingWeight).toBe(0);
+    expect(summary.configuredWeight).toBe(90);
+    expect(summary.unassignedWeight).toBe(10);
+    expect(summary.isConfigurationIncomplete).toBe(true);
+    expect(summary.currentAverage).toBeCloseTo(5.11, 2);
+    expect(summary.status).toBe("pending");
+    expect(summary.requiredGrade).toBeNull();
+    expect(summary.advice).toContain("Configuración incompleta");
   });
 });

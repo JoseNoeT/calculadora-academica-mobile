@@ -1,4 +1,4 @@
-import type { GradeValue, PercentageValue } from "../types";
+import type { GradeValue, PercentageValue, SubjectAcademicConfig } from "../types";
 
 export interface Subject {
   id: string;
@@ -9,6 +9,7 @@ export interface Subject {
   passingGrade: GradeValue;
   targetGrade?: GradeValue;
   accumulatedWeight: PercentageValue;
+  subjectAcademicConfig?: SubjectAcademicConfig | null;
   createdAt: string;
   updatedAt: string;
 }

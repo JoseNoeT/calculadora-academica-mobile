@@ -1,4 +1,6 @@
 import type { Subject } from "../../domain/entities";
+import { normalizeSubjectAcademicConfig } from "../../domain/rules";
+import type { SubjectAcademicConfig } from "../../domain/types";
 import { initializeDatabase } from "../database/migrations";
 import { getDatabase } from "../database/sqliteClient";
 
@@ -7,6 +9,7 @@ export interface SubjectStorageItem {
   name: string;
   minimumGrade: number;
   color: string;
+  subjectAcademicConfig?: SubjectAcademicConfig | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -32,9 +35,30 @@ type SubjectRow = {
   name: string;
   minimum_grade: number;
   color: string | null;
+  subject_academic_config_json: string | null;
   created_at: string;
   updated_at: string;
 };
+
+function parseSubjectAcademicConfig(
+  value: string | null,
+  minimumGrade: number,
+): SubjectAcademicConfig | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return normalizeSubjectAcademicConfig(parsed, {
+      fallbackPassingGrade: minimumGrade,
+    });
+  } catch {
+    return normalizeSubjectAcademicConfig(null, {
+      fallbackPassingGrade: minimumGrade,
+    });
+  }
+}
 
 function mapRowToSubjectStorageItem(row: SubjectRow): SubjectStorageItem {
   return {
@@ -42,6 +66,10 @@ function mapRowToSubjectStorageItem(row: SubjectRow): SubjectStorageItem {
     name: row.name,
     minimumGrade: row.minimum_grade,
     color: row.color ?? "#2563EB",
+    subjectAcademicConfig: parseSubjectAcademicConfig(
+      row.subject_academic_config_json,
+      row.minimum_grade,
+    ),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -53,7 +81,7 @@ export async function getAllSubjects(): Promise<SubjectStorageItem[]> {
 
   const rows = await database.getAllAsync<SubjectRow>(
     `
-      SELECT id, name, minimum_grade, color, created_at, updated_at
+      SELECT id, name, minimum_grade, color, subject_academic_config_json, created_at, updated_at
       FROM subjects
       ORDER BY datetime(created_at) DESC
     `,
@@ -70,7 +98,7 @@ export async function getSubjectById(
 
   const row = await database.getFirstAsync<SubjectRow>(
     `
-      SELECT id, name, minimum_grade, color, created_at, updated_at
+      SELECT id, name, minimum_grade, color, subject_academic_config_json, created_at, updated_at
       FROM subjects
       WHERE id = ?
       LIMIT 1
@@ -93,14 +121,25 @@ export async function createSubject(
 
   await database.runAsync(
     `
-      INSERT INTO subjects (id, name, minimum_grade, color, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO subjects (
+        id,
+        name,
+        minimum_grade,
+        color,
+        subject_academic_config_json,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `,
     [
       input.id,
       input.name,
       input.minimumGrade,
       input.color,
+      input.subjectAcademicConfig
+        ? JSON.stringify(input.subjectAcademicConfig)
+        : null,
       input.createdAt,
       input.updatedAt,
     ],
@@ -137,6 +176,15 @@ export async function updateSubject(
 export async function deleteSubject(id: string): Promise<void> {
   await initializeDatabase();
   const database = await getDatabase();
+
+  // Defensa ante esquemas legacy donde el ON DELETE CASCADE no esté activo.
+  await database.runAsync(
+    `
+      DELETE FROM evaluations
+      WHERE subject_id = ?
+    `,
+    [id],
+  );
 
   await database.runAsync(
     `

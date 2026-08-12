@@ -6,6 +6,9 @@ export interface AcademicSummary {
   accumulatedPoints: number;
   completedWeight: number;
   pendingWeight: number;
+  configuredWeight: number;
+  unassignedWeight: number;
+  isConfigurationIncomplete: boolean;
   currentAverage: number | null;
   requiredGrade: number | null;
   status: AcademicStatus;
@@ -78,6 +81,7 @@ export function calculateRequiredGrade(
 export function calculateStatus(input: {
   hasGradedEvaluations: boolean;
   hasPendingEvaluations: boolean;
+  hasIncompleteConfiguration: boolean;
   completedWeight: number;
   pendingWeight: number;
   currentAverage: number | null;
@@ -87,6 +91,7 @@ export function calculateStatus(input: {
   const {
     hasGradedEvaluations,
     hasPendingEvaluations,
+    hasIncompleteConfiguration,
     completedWeight,
     currentAverage,
     requiredGrade,
@@ -100,6 +105,10 @@ export function calculateStatus(input: {
 
   // Aprobado/Reprobado: no hay pendientes y todas tienen nota valida.
   if (!hasPendingEvaluations) {
+    if (hasIncompleteConfiguration) {
+      return "pending";
+    }
+
     if (currentAverage !== null && currentAverage >= passingGrade) {
       return "approved";
     }
@@ -131,8 +140,20 @@ export function generateAcademicAdvice(input: {
   status: AcademicStatus;
   requiredGrade: number | null;
   pendingWeight: number;
+  unassignedWeight?: number;
+  isConfigurationIncomplete?: boolean;
 }): string {
-  const { status, requiredGrade, pendingWeight } = input;
+  const {
+    status,
+    requiredGrade,
+    pendingWeight,
+    unassignedWeight = 0,
+    isConfigurationIncomplete = false,
+  } = input;
+
+  if (isConfigurationIncomplete && unassignedWeight > 0) {
+    return `Configuración incompleta: falta asignar ${unassignedWeight.toFixed(2)}% de ponderación.`;
+  }
 
   if (status === "pending") {
     return "Aun no hay notas validas registradas. Agrega tu primera nota para calcular el avance real.";
@@ -187,6 +208,9 @@ export function calculateAcademicSummary(input: {
     pendingWeight,
     input.passingGrade,
   );
+  const configuredWeight = round2(completedWeight + pendingWeight);
+  const unassignedWeight = round2(Math.max(0, 100 - configuredWeight));
+  const isConfigurationIncomplete = unassignedWeight > 0;
   const hasGradedEvaluations = input.evaluations.some(hasGrade);
   const hasPendingEvaluations = input.evaluations.some(
     (evaluation) => !hasGrade(evaluation),
@@ -194,6 +218,7 @@ export function calculateAcademicSummary(input: {
   const status = calculateStatus({
     hasGradedEvaluations,
     hasPendingEvaluations,
+    hasIncompleteConfiguration: isConfigurationIncomplete,
     completedWeight,
     pendingWeight,
     currentAverage,
@@ -204,12 +229,17 @@ export function calculateAcademicSummary(input: {
     status,
     requiredGrade,
     pendingWeight,
+    unassignedWeight,
+    isConfigurationIncomplete,
   });
 
   return {
     accumulatedPoints,
     completedWeight,
     pendingWeight,
+    configuredWeight,
+    unassignedWeight,
+    isConfigurationIncomplete,
     currentAverage,
     requiredGrade,
     status,
