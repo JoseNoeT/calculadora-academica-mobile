@@ -7,6 +7,7 @@ import {
     MiniTrendChart,
 } from "@/src/components/charts";
 import { AppBadge, AppText } from "@/src/components/ui";
+import { strings } from "@/src/constants/strings";
 import { spacing, useAppTheme } from "@/src/theme";
 
 type HomeHeroProps = {
@@ -22,6 +23,7 @@ type HomeHeroProps = {
   statusTone: "info" | "success" | "warning" | "danger" | "pending";
   overallProgress: number;
   trendPoints: number[];
+  hasTrendData: boolean;
 };
 
 type QuickAction = {
@@ -44,6 +46,7 @@ export function HomeHero({
   statusTone,
   overallProgress,
   trendPoints,
+  hasTrendData,
 }: HomeHeroProps) {
   const { theme } = useAppTheme();
   const { height } = useWindowDimensions();
@@ -176,7 +179,7 @@ export function HomeHero({
               tone="info"
             />
             <AnimatedStatCard
-              label="Con evaluaciones"
+              label="Ramos con evaluaciones"
               value={`${subjectsWithEvaluations}`}
               delay={70}
             />
@@ -188,10 +191,18 @@ export function HomeHero({
             />
           </View>
 
-          <MiniTrendChart
-            points={trendPoints}
-            height={isCompactHeight ? 38 : 46}
-          />
+          {hasTrendData ? (
+            <MiniTrendChart
+              points={trendPoints}
+              height={isCompactHeight ? 38 : 46}
+            />
+          ) : (
+            <AppText variant="caption" tone="secondary">
+              {hasSubjects
+                ? strings.home.pulseInsufficientData
+                : strings.home.pulseNoSubjects}
+            </AppText>
+          )}
         </View>
 
         <Pressable
@@ -294,10 +305,10 @@ const styles = StyleSheet.create({
   heroCard: {
     borderWidth: 1,
     borderRadius: 24,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.lg,
-    gap: spacing.sm,
+    paddingBottom: spacing.xl,
+    gap: spacing.lg,
   },
   heroCardCompact: {
     paddingVertical: spacing.sm,
@@ -309,7 +320,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   heroHeader: {
-    gap: 4,
+    gap: spacing.sm,
   },
   heroSubtitle: {
     paddingRight: spacing.xs,
@@ -319,7 +330,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.sm,
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   progressCardCompact: {
     paddingVertical: 6,

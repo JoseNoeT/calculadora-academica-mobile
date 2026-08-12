@@ -13,6 +13,7 @@ import {
     AppScreen,
     AppText,
 } from "@/src/components/ui";
+import { strings } from "@/src/constants/strings";
 import {
     academicStatusLabels,
     type AcademicStatus,
@@ -30,7 +31,7 @@ import {
     buildSubjectDashboardMetrics,
     type SubjectDashboardMetrics,
 } from "@/src/features/subjects/utils/dashboardMetrics";
-import { spacing } from "@/src/theme";
+import { spacing, useAppTheme } from "@/src/theme";
 
 function getStatusTone(
   status: AcademicStatus,
@@ -55,6 +56,7 @@ function getStatusTone(
 }
 
 export default function HomeScreen() {
+  const { theme } = useAppTheme();
   const router = useRouter();
   const quickCalculatorRoute: Href = "/calculator/quick" as Href;
   const subjectsRoute: Href = "/subjects" as Href;
@@ -73,11 +75,13 @@ export default function HomeScreen() {
     overallAdvice: "",
     trendDirection: "flat" as "up" | "down" | "flat",
     trendPoints: [8, 14, 22, 16, 28, 34],
+    perSubjectEvaluationCounts: {} as Record<string, number>,
+    perSubjectStatuses: {} as Record<string, AcademicStatus>,
     alerts: [
       {
         id: "default-info",
         tone: "info",
-        message: "Comienza creando tu primer ramo para activar el dashboard.",
+        message: strings.home.defaultInfoMessage,
       },
     ],
     featuredSubjects: [],
@@ -104,10 +108,10 @@ export default function HomeScreen() {
 
   const trendText =
     heroMetrics.trendDirection === "up"
-      ? "Tendencia al alza"
+      ? strings.home.trendUp
       : heroMetrics.trendDirection === "down"
-        ? "Tendencia a la baja"
-        : "Tendencia estable";
+        ? strings.home.trendDown
+        : strings.home.trendStable;
 
   const trendTone =
     heroMetrics.trendDirection === "up"
@@ -115,6 +119,11 @@ export default function HomeScreen() {
       : heroMetrics.trendDirection === "down"
         ? "warning"
         : "secondary";
+  const hasSubjects = heroMetrics.totalSubjects > 0;
+  const hasRealTrendData =
+    hasSubjects &&
+    heroMetrics.overallCurrentAverage !== null &&
+    heroMetrics.trendPoints.length > 0;
 
   const riskSubjects = getRiskSubjects(heroMetrics.featuredSubjects);
   const pendingEvaluationItems = getPendingEvaluations(
@@ -136,6 +145,11 @@ export default function HomeScreen() {
   const alertsAccentTone = homeAlerts.some((alert) => alert.tone === "danger")
     ? "warm"
     : "cool";
+  const featuredSubjectsCount = heroMetrics.featuredSubjects.length;
+  const featuredSubjectsSubtitle = strings.home.featuredSubjectsSubtitle(
+    featuredSubjectsCount,
+    heroMetrics.totalSubjects,
+  );
 
   const handleActionPress = (
     routeKey: "subjects-create" | "subjects" | "simulator" | "calculator",
@@ -159,9 +173,27 @@ export default function HomeScreen() {
   };
 
   return (
-    <AppScreen scrollable>
+    <AppScreen scrollable stickyHeader={<AppHeader />}>
       <View style={styles.container}>
-        <AppHeader />
+        {!hasSubjects ? (
+          <AppCard variant="glass" showTopAccent>
+            <View style={styles.welcomeContainer}>
+              <AppText variant="h2">Bienvenido a tu panel académico</AppText>
+              <AppText variant="bodySecondary">
+                Organiza tus ramos, registra evaluaciones y simula tus notas
+                para saber cómo vas avanzando durante el semestre.
+              </AppText>
+              <AppText variant="caption" tone="secondary">
+                Comienza creando tu primer ramo.
+              </AppText>
+              <AppButton
+                label="Crear primer ramo"
+                onPress={() => router.push(createSubjectRoute)}
+                style={styles.welcomeButton}
+              />
+            </View>
+          </AppCard>
+        ) : null}
 
         <HomeHero
           onPressCalculateNow={() => router.push(quickCalculatorRoute)}
@@ -176,41 +208,50 @@ export default function HomeScreen() {
           statusTone={getStatusTone(heroMetrics.overallStatus)}
           overallProgress={heroMetrics.overallProgress}
           trendPoints={heroMetrics.trendPoints}
+          hasTrendData={hasRealTrendData}
         />
 
-        <AppCard title="Tu situación actual" variant="elevated" showTopAccent>
+        <AppCard
+          title={strings.home.currentSituationTitle}
+          variant="elevated"
+          showTopAccent
+        >
           <View style={styles.statsGrid}>
-            <AnimatedStatCard
-              label="Promedio actual"
-              value={
-                heroMetrics.overallCurrentAverage != null
-                  ? heroMetrics.overallCurrentAverage.toFixed(2)
-                  : "Sin notas"
-              }
-              tone="info"
-            />
-            <AnimatedStatCard
-              label="Cantidad de ramos"
-              value={`${heroMetrics.totalSubjects}`}
-              delay={60}
-            />
-            <AnimatedStatCard
-              label="Ramos en riesgo"
-              value={`${heroMetrics.subjectsAtRisk}`}
-              tone={heroMetrics.subjectsAtRisk > 0 ? "warning" : "success"}
-              delay={120}
-            />
-            <AnimatedStatCard
-              label="Evaluaciones pendientes"
-              value={`${heroMetrics.pendingEvaluations}`}
-              tone={heroMetrics.pendingEvaluations > 0 ? "info" : "success"}
-              delay={180}
-            />
+            <View style={styles.statsRow}>
+              <AnimatedStatCard
+                label="Promedio"
+                value={
+                  heroMetrics.overallCurrentAverage != null
+                    ? heroMetrics.overallCurrentAverage.toFixed(2)
+                    : strings.home.noGrades
+                }
+                tone="info"
+              />
+              <AnimatedStatCard
+                label="Ramos"
+                value={`${heroMetrics.totalSubjects}`}
+                delay={60}
+              />
+            </View>
+            <View style={styles.statsRow}>
+              <AnimatedStatCard
+                label="En riesgo"
+                value={`${heroMetrics.subjectsAtRisk}`}
+                tone={heroMetrics.subjectsAtRisk > 0 ? "warning" : "success"}
+                delay={120}
+              />
+              <AnimatedStatCard
+                label="Evaluaciones pendientes"
+                value={`${heroMetrics.pendingEvaluations}`}
+                tone={heroMetrics.pendingEvaluations > 0 ? "info" : "success"}
+                delay={180}
+              />
+            </View>
           </View>
         </AppCard>
 
         <AppCard
-          title="Alertas académicas"
+          title={strings.home.alertsTitle}
           variant="accent"
           accentTone={alertsAccentTone}
         >
@@ -220,20 +261,16 @@ export default function HomeScreen() {
                 <AppBadge
                   label={
                     alert.tone === "danger"
-                      ? "Crítica"
+                      ? strings.home.critical
                       : alert.tone === "warning"
-                        ? "Atención"
+                        ? strings.home.attention
                         : alert.tone === "success"
-                          ? "Positivo"
-                          : "Info"
+                          ? strings.home.positive
+                          : strings.home.info
                   }
                   tone={alert.tone}
                 />
-                <AppText
-                  variant="body"
-                  tone="secondary"
-                  style={styles.alertText}
-                >
+                <AppText variant="bodySecondary" style={styles.alertText}>
                   {alert.icon} {alert.message}
                 </AppText>
               </View>
@@ -241,27 +278,27 @@ export default function HomeScreen() {
           </View>
         </AppCard>
 
-        <AppCard title="Insights" variant="glass" showTopAccent>
+        <AppCard
+          title={strings.home.insightsTitle}
+          variant="glass"
+          showTopAccent
+        >
           <View style={styles.alertsList}>
             {homeInsights.map((insight) => (
               <View key={insight.id} style={styles.alertItem}>
                 <AppBadge
                   label={
                     insight.tone === "danger"
-                      ? "Riesgo"
+                      ? strings.home.risk
                       : insight.tone === "warning"
-                        ? "Atención"
+                        ? strings.home.attention
                         : insight.tone === "success"
-                          ? "Positivo"
-                          : "Info"
+                          ? strings.home.positive
+                          : strings.home.info
                   }
                   tone={insight.tone}
                 />
-                <AppText
-                  variant="body"
-                  tone="secondary"
-                  style={styles.alertText}
-                >
+                <AppText variant="bodySecondary" style={styles.alertText}>
                   {insight.icon} {insight.text}
                 </AppText>
               </View>
@@ -269,7 +306,7 @@ export default function HomeScreen() {
           </View>
         </AppCard>
 
-        <AppCard title="Próximas acciones" variant="elevated">
+        <AppCard title={strings.home.nextActionsTitle} variant="elevated">
           <View style={styles.actionsList}>
             {nextActions.map((action, index) => (
               <View key={action.id} style={styles.actionItem}>
@@ -285,9 +322,33 @@ export default function HomeScreen() {
                   {action.description}
                 </AppText>
                 <AppButton
-                  label={action.title}
+                  label={
+                    action.routeKey === "subjects" ? "Ver ramos" : action.title
+                  }
                   variant={
                     index === 0 ? "primary" : index === 1 ? "outline" : "ghost"
+                  }
+                  style={
+                    action.routeKey === "subjects"
+                      ? [
+                          styles.secondaryActionButton,
+                          {
+                            backgroundColor:
+                              theme.mode === "dark"
+                                ? "rgba(37,99,235,0.08)"
+                                : "rgba(37,99,235,0.06)",
+                            borderColor:
+                              theme.mode === "dark"
+                                ? "rgba(148,163,184,0.34)"
+                                : "rgba(100,116,139,0.34)",
+                          },
+                        ]
+                      : undefined
+                  }
+                  labelStyle={
+                    action.routeKey === "subjects"
+                      ? { color: theme.primary }
+                      : undefined
                   }
                   onPress={() => handleActionPress(action.routeKey)}
                 />
@@ -296,33 +357,67 @@ export default function HomeScreen() {
           </View>
         </AppCard>
 
-        <AppCard title="Tendencia" variant="accent" accentTone="cool">
-          <View style={styles.trendHeader}>
-            <AppText
-              variant="h1Compact"
-              tone={trendTone === "secondary" ? "primary" : trendTone}
-            >
-              {trendIcon}
-            </AppText>
-            <View style={styles.trendCopy}>
-              <AppText variant="h3">{trendText}</AppText>
-              <AppText variant="caption" tone="secondary">
-                Basada en el progreso rendido de tus ramos activos.
+        <AppCard
+          title={strings.home.trendTitle}
+          variant="accent"
+          accentTone="cool"
+        >
+          {!hasSubjects ? (
+            <View style={styles.trendStateContainer}>
+              <AppText variant="h3">{strings.home.noTrendTitle}</AppText>
+              <AppText variant="bodySecondary" tone="secondary">
+                {strings.home.noTrendDescription}
+              </AppText>
+              <AppButton
+                label={strings.subjectsTab.add}
+                onPress={() => router.push(createSubjectRoute)}
+              />
+            </View>
+          ) : !hasRealTrendData ? (
+            <View style={styles.trendStateContainer}>
+              <AppText variant="h3">
+                {strings.home.insufficientDataTitle}
+              </AppText>
+              <AppText variant="bodySecondary" tone="secondary">
+                {strings.home.insufficientDataDescription}
               </AppText>
             </View>
-          </View>
-          <MiniTrendChart points={heroMetrics.trendPoints} height={56} />
+          ) : (
+            <>
+              <View style={styles.trendHeader}>
+                <AppText
+                  variant="h1Compact"
+                  tone={trendTone === "secondary" ? "primary" : trendTone}
+                >
+                  {trendIcon}
+                </AppText>
+                <View style={styles.trendCopy}>
+                  <AppText variant="h3">{trendText}</AppText>
+                  <AppText variant="caption" tone="secondary">
+                    {strings.home.trendDescription}
+                  </AppText>
+                </View>
+              </View>
+              <MiniTrendChart points={heroMetrics.trendPoints} height={56} />
+            </>
+          )}
         </AppCard>
 
         <AppCard
-          title="Tus ramos"
-          subtitle="Destacados por prioridad académica"
+          title={strings.home.featuredSubjectsTitle}
+          subtitle={featuredSubjectsSubtitle}
           variant="elevated"
         >
+          <AppButton
+            label={strings.home.viewAllSubjects}
+            variant="outline"
+            style={styles.featuredActionButton}
+            onPress={() => router.push(subjectsRoute)}
+          />
+
           {heroMetrics.featuredSubjects.length === 0 ? (
-            <AppText variant="body" tone="secondary">
-              Aún no hay ramos para destacar. Crea tu primer ramo y comienza a
-              construir tu panel.
+            <AppText variant="bodySecondary">
+              {strings.home.emptyFeaturedSubjects}
             </AppText>
           ) : (
             <View style={styles.featuredList}>
@@ -349,11 +444,12 @@ export default function HomeScreen() {
                         {subject.name}
                       </AppText>
                       <AppText variant="caption" tone="secondary">
-                        Promedio:{" "}
+                        {strings.home.averagePrefix}{" "}
                         {subject.currentAverage != null
                           ? subject.currentAverage.toFixed(2)
-                          : "Sin notas"}{" "}
-                        · Pendientes: {subject.pendingEvaluations}
+                          : strings.home.noGrades}{" "}
+                        · {strings.home.pendingPrefix}{" "}
+                        {subject.pendingEvaluations}
                       </AppText>
                     </View>
                     <AppBadge
@@ -373,11 +469,19 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.md,
+    gap: spacing.lg,
+  },
+  welcomeContainer: {
+    gap: spacing.sm,
+  },
+  welcomeButton: {
+    marginTop: spacing.xs,
   },
   statsGrid: {
+    gap: spacing.md,
+  },
+  statsRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: spacing.sm,
   },
   alertsList: {
@@ -390,10 +494,13 @@ const styles = StyleSheet.create({
     paddingLeft: 2,
   },
   actionsList: {
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   actionItem: {
-    gap: spacing.xs,
+    gap: spacing.sm,
+  },
+  secondaryActionButton: {
+    minHeight: 48,
   },
   actionButtonsRow: {
     flexDirection: "row",
@@ -411,8 +518,14 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
-  featuredList: {
+  trendStateContainer: {
     gap: spacing.sm,
+  },
+  featuredList: {
+    gap: spacing.md,
+  },
+  featuredActionButton: {
+    minHeight: 44,
   },
   featuredPressable: {
     borderRadius: 12,

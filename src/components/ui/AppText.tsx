@@ -12,16 +12,26 @@ type AppTextVariant =
   | "bodyStrong"
   | "caption"
   | "button"
-  // Backward-compatible aliases used across the app
+  // Semantic variants
+  | "navTitle"
+  | "navSubtitle"
+  | "cardTitle"
+  | "bodySecondary"
+  | "metricLabel"
+  | "metricValue"
+  // Backward-compatible aliases
   | "title"
   | "subtitle"
   | "hero"
   | "sectionTitle"
   | "label"
   | "metric";
+
 type AppTextTone =
   | "primary"
   | "secondary"
+  | "muted"
+  | "accent"
   | "success"
   | "warning"
   | "danger"
@@ -51,15 +61,21 @@ export function AppText({
 }: AppTextProps) {
   const { theme } = useAppTheme();
 
-  const colorMap = {
+  const colorMap: Record<AppTextTone, string> = {
     primary: theme.textPrimary,
     secondary: theme.textSecondary,
+    muted: theme.textMuted,
+    accent: theme.textAccent,
     success: theme.success,
     warning: theme.warning,
     danger: theme.danger,
     info: theme.info,
     pending: theme.pending,
-  } as const;
+  };
+
+  // bodySecondary renders in secondary tone by default unless explicitly overridden
+  const effectiveTone: AppTextTone =
+    variant === "bodySecondary" && tone === "primary" ? "secondary" : tone;
 
   return (
     <Text
@@ -69,7 +85,7 @@ export function AppText({
       style={[
         styles.base,
         variantStyles[variant],
-        { color: colorMap[tone], textAlign: align },
+        { color: colorMap[effectiveTone], textAlign: align },
         style,
       ]}
     >
@@ -87,6 +103,7 @@ const styles = StyleSheet.create({
 });
 
 const variantStyles = StyleSheet.create({
+  // Core variants
   h1: {
     fontFamily: "Syne_800ExtraBold",
     fontSize: 30,
@@ -129,7 +146,39 @@ const variantStyles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 20,
   },
-  // Aliases
+  // Semantic variants
+  navTitle: {
+    fontFamily: "Syne_800ExtraBold",
+    fontSize: 18,
+    lineHeight: 24,
+    letterSpacing: 0.4,
+  },
+  navSubtitle: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  cardTitle: {
+    fontFamily: "Syne_700Bold",
+    fontSize: 20,
+    lineHeight: 25,
+  },
+  bodySecondary: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  metricLabel: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  metricValue: {
+    fontFamily: "Syne_700Bold",
+    fontSize: 24,
+    lineHeight: 28,
+  },
+  // Backward-compatible aliases
   subtitle: {
     fontFamily: "DMSans_500Medium",
     fontSize: 15,

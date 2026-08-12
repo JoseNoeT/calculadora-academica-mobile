@@ -1,133 +1,119 @@
-# Welcome to your Expo app 👋
-
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
-
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
-
-@'
-# Calculadora Académica Mobile
+﻿# Calculadora Académica Mobile
 
 Aplicación móvil offline-first para calcular, organizar y proyectar notas académicas desde el celular.
 
-## Objetivo del proyecto
+## Descripción
 
-Ayudar a estudiantes a conocer su avance académico, calcular la nota necesaria para aprobar y simular escenarios futuros de manera clara, rápida y confiable.
+Calculadora Académica Mobile centraliza el seguimiento de asignaturas, evaluaciones, notas y ponderaciones en una aplicación móvil. Su lógica académica permite conocer el avance de cada asignatura y proyectar distintos escenarios antes de completar todas las evaluaciones.
 
-## Problema que resuelve
+La aplicación responde a preguntas habituales del seguimiento académico, como cuánto se lleva acumulado, qué porcentaje de la asignatura ya fue evaluado, cuánto falta por rendir y qué nota se necesita para alcanzar la aprobación.
 
-Muchos estudiantes calculan sus notas usando calculadora, Excel o estimaciones manuales. Esto puede generar errores, pérdida de tiempo y poca claridad sobre su situación académica real.
+## Funcionalidades
 
-Esta app busca responder preguntas como:
-
-- ¿Voy aprobando este ramo?
-- ¿Cuánto llevo acumulado?
-- ¿Qué ponderación ya rendí?
-- ¿Qué ponderación me falta?
-- ¿Qué nota necesito para aprobar?
-- ¿Qué pasa si me saco cierta nota en la próxima evaluación?
-
-## Funcionalidades MVP
-
-- Calculadora rápida sin guardar datos.
-- Gestión de ramos o asignaturas.
-- Evaluaciones configurables.
-- Nombre, nota y ponderación por evaluación.
-- Soporte para notas pendientes.
+- Calculadora académica rápida.
+- Gestión de asignaturas.
+- Gestión de evaluaciones.
+- Registro de notas y ponderaciones.
+- Evaluaciones pendientes.
 - Nota mínima configurable.
-- Puntos acumulados.
-- Ponderación rendida.
-- Ponderación pendiente.
-- Promedio ponderado actual.
-- Nota necesaria para aprobar.
+- Cálculo de puntos acumulados.
+- Ponderación rendida y pendiente.
+- Promedio ponderado.
+- Cálculo de nota necesaria para aprobar.
 - Estado académico automático.
-- Consejos académicos.
-- Simulador básico de nota futura.
+- Simulación de escenarios académicos.
+- Indicadores académicos.
 - Persistencia local.
+- Perfiles de configuración académica.
 - Modo claro y oscuro.
 
-## Stack técnico planificado
+## Tecnologías
 
-- React Native
-- Expo
-- TypeScript
-- Expo Router
-- SQLite
-- AsyncStorage o MMKV
-- Jest
+El proyecto está desarrollado con React Native, Expo y TypeScript. Utiliza Expo Router para la navegación, SQLite y almacenamiento local para la persistencia de información, y Jest para las pruebas automatizadas.
 
-## Enfoque de arquitectura
+## Arquitectura
 
-El proyecto se desarrollará con separación de responsabilidades:
+La aplicación mantiene separadas las responsabilidades de interfaz, componentes, dominio, lógica de negocio, servicios, repositorios y persistencia.
 
-- Presentación
-- Componentes reutilizables
-- Lógica de negocio
-- Dominio
-- Persistencia local
-- Sistema de diseño
-- Testing
+Los cálculos académicos se encuentran desacoplados de la interfaz, permitiendo validar la lógica de manera independiente y reutilizarla en distintas partes de la aplicación.
 
-La lógica matemática estará separada de la interfaz para facilitar pruebas y mantenimiento.
+La estructura incluye:
 
-## Estado actual
+- presentación e interfaz;
+- componentes reutilizables;
+- dominio académico;
+- calculadoras y reglas académicas;
+- servicios de asignaturas y evaluaciones;
+- repositorios;
+- persistencia local;
+- sistema de diseño;
+- pruebas automatizadas.
 
-Proyecto en fase inicial de configuración profesional:
+## Persistencia
 
-- Repositorio creado.
-- Proyecto Expo inicializado.
-- Estructura escalable de carpetas creada.
-- Documentación funcional en proceso.
+La información académica se almacena localmente en el dispositivo. La aplicación utiliza una capa de repositorios y migraciones para mantener separada la persistencia de la lógica de negocio.
+
+Este enfoque permite que las funciones principales puedan utilizarse sin depender permanentemente de una conexión a Internet.
+
+## Lógica académica
+
+El dominio contempla el cálculo de:
+
+- promedio ponderado;
+- puntos acumulados;
+- porcentaje evaluado;
+- porcentaje pendiente;
+- nota necesaria para aprobar;
+- estado académico;
+- proyecciones basadas en evaluaciones futuras.
+
+También existen perfiles y reglas de configuración que permiten adaptar los cálculos a diferentes condiciones académicas.
+
+## Calidad y pruebas
+
+La lógica principal cuenta con pruebas automatizadas para cálculos académicos, perfiles, reglas de configuración, asignaturas, evaluaciones, repositorios, almacenamiento y migraciones de base de datos.
+
+En la validación realizada sobre la versión actual se ejecutaron:
+
+- 14 suites de pruebas;
+- 143 pruebas;
+- 143 pruebas aprobadas;
+- 0 pruebas fallidas.
+
+El análisis estático del proyecto se ejecuta mediante ESLint. La revisión actual no presenta errores de lint, aunque mantiene algunas advertencias menores pendientes de normalización.
+
+## Documentación
+
+El proyecto dispone de documentación técnica complementaria sobre arquitectura, estructura, lógica matemática, persistencia, sistema de diseño, decisiones técnicas, flujo de trabajo Git y casos de prueba.
+
+## Ejecución local
+
+Dependencias:
+
+    npm install
+
+Inicio del proyecto:
+
+    npx expo start
+
+Pruebas automatizadas:
+
+    npm test -- --runInBand
+
+Análisis estático:
+
+    npm run lint
+
+## Estado del proyecto
+
+La aplicación cuenta con un MVP funcional y una base técnica consolidada. La versión actual incluye gestión académica, persistencia local, cálculos y proyecciones, perfiles académicos y pruebas automatizadas.
+
+El proyecto continúa en evolución para ampliar y perfeccionar la experiencia de uso.
 
 ## Autor
 
-Jose Miguel Noe Torres
+José Miguel Noé Torres
 
 ## Licencia
 
 MIT
-'@ | Set-Content README.md -Encoding UTF8

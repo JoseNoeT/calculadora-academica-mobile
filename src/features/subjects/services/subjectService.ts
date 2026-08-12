@@ -1,8 +1,11 @@
-import { MAX_GRADE, MIN_GRADE } from "../../../domain/rules";
+import { createSubjectAcademicConfigFromTemplate, MAX_GRADE, MIN_GRADE } from "../../../domain/rules";
+import type { AcademicProfileId } from "../../../domain/types";
 import {
     validatePassingGrade,
     validateSubjectName,
 } from "../../../domain/validators";
+import { getAcademicSettingsTemplate } from "../../../storage/settingsStorage";
+import { deleteEvaluationsBySubjectId } from "../../../storage/repositories/evaluationRepository";
 import {
     getPersistedSubjectById,
     getPersistedSubjects,
@@ -42,11 +45,26 @@ export async function createSubject(
   }
 
   const now = new Date().toISOString();
+  const academicTemplate = await getAcademicSettingsTemplate();
+  const selectedProfileId =
+    input.academicProfileId ?? academicTemplate.defaultProfileId;
+  const subjectAcademicConfig = createSubjectAcademicConfigFromTemplate(
+    {
+      ...academicTemplate,
+      defaultProfileId: selectedProfileId,
+    },
+    {
+      passingGradeOverride: input.minimumGrade,
+      copiedAt: now,
+    },
+  );
+
   const subject: SubjectListItem = {
     id: createSubjectId(),
     name,
     minimumGrade: input.minimumGrade,
     color: input.color,
+    subjectAcademicConfig,
     createdAt: now,
     updatedAt: now,
   };
@@ -60,8 +78,19 @@ export function validateSubjectDraft(input: CreateSubjectInput) {
   return validateSubjectName(input.name);
 }
 
+export async function getDefaultAcademicProfileId(): Promise<AcademicProfileId> {
+  const academicTemplate = await getAcademicSettingsTemplate();
+  return academicTemplate.defaultProfileId;
+}
+
 export async function deleteSubject(id: string): Promise<void> {
-  await removePersistedSubject(id);
+  try {
+    await deleteEvaluationsBySubjectId(id);
+    await removePersistedSubject(id);
+  } catch (error) {
+    console.error("[DeleteSubject] Error:", error);
+    throw error;
+  }
 }
 
 export async function getSubjectById(

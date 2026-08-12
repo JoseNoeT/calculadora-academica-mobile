@@ -12,6 +12,8 @@ import {
     AppScreen,
     AppText,
 } from "@/src/components/ui";
+import { strings } from "@/src/constants/strings";
+import { parseAcademicNumber } from "@/src/domain/utils/parseAcademicNumber";
 import {
     deleteAllSubjectsData,
     getAppPreferences,
@@ -31,18 +33,18 @@ const themeOptions: Array<{
 }> = [
   {
     value: "system",
-    label: "Sistema",
-    description: "Usa automáticamente el modo de tu dispositivo.",
+    label: strings.settings.system,
+    description: strings.settings.systemDescription,
   },
   {
     value: "light",
-    label: "Claro",
-    description: "Prioriza legibilidad en ambientes luminosos.",
+    label: strings.settings.light,
+    description: strings.settings.lightDescription,
   },
   {
     value: "dark",
-    label: "Oscuro",
-    description: "Reduce brillo y fatiga visual en ambientes oscuros.",
+    label: strings.settings.dark,
+    description: strings.settings.darkDescription,
   },
 ];
 
@@ -53,8 +55,8 @@ const gradingScaleOptions: Array<{
 }> = [
   {
     value: "1.0-7.0",
-    label: "Escala chilena",
-    description: "Rango activo: 1.0 a 7.0 (extensible en futuras versiones).",
+    label: strings.settings.chileanScale,
+    description: strings.settings.scaleDescription,
   },
 ];
 
@@ -79,7 +81,7 @@ export default function SettingsScreen() {
     [],
   );
   const projectName = useMemo(
-    () => Constants.expoConfig?.name ?? "Calculadora Académica Mobile",
+    () => Constants.expoConfig?.name ?? strings.settings.projectFallbackName,
     [],
   );
 
@@ -97,15 +99,15 @@ export default function SettingsScreen() {
   );
 
   const handleSaveAcademicSettings = useCallback(async () => {
-    const parsed = Number(minimumGradeInput.replace(",", ".").trim());
+    const parsed = parseAcademicNumber(minimumGradeInput);
 
-    if (!Number.isFinite(parsed)) {
-      setMinimumGradeError("Ingresa un valor numérico válido.");
+    if (parsed === null) {
+      setMinimumGradeError(strings.settings.invalidNumericValue);
       return;
     }
 
     if (parsed < 1 || parsed > 7) {
-      setMinimumGradeError("La nota mínima global debe estar entre 1.0 y 7.0.");
+      setMinimumGradeError(strings.settings.globalMinRangeError);
       return;
     }
 
@@ -164,18 +166,18 @@ export default function SettingsScreen() {
 
   const handleDeleteAllSubjects = useCallback(() => {
     Alert.alert(
-      "Eliminar todos los ramos",
-      "Se eliminarán todos los ramos y evaluaciones guardadas en este dispositivo.",
+      strings.settings.deleteAllSubjectsTitle,
+      strings.settings.deleteAllSubjectsMessage,
       [
-        { text: "Cancelar", style: "cancel" },
+        { text: strings.common.cancel, style: "cancel" },
         {
-          text: "Eliminar",
+          text: strings.common.delete,
           style: "destructive",
           onPress: async () => {
             await deleteAllSubjectsData();
             Alert.alert(
-              "Datos eliminados",
-              "Todos los ramos fueron eliminados correctamente.",
+              strings.settings.deletedDataTitle,
+              strings.settings.deletedDataMessage,
             );
           },
         },
@@ -185,20 +187,20 @@ export default function SettingsScreen() {
 
   const handleResetApplication = useCallback(() => {
     Alert.alert(
-      "Reiniciar aplicación",
-      "Se eliminarán ramos, evaluaciones y configuraciones personalizadas.",
+      strings.settings.resetAppTitle,
+      strings.settings.resetAppMessage,
       [
-        { text: "Cancelar", style: "cancel" },
+        { text: strings.common.cancel, style: "cancel" },
         {
-          text: "Reiniciar",
+          text: strings.settings.resetButton,
           style: "destructive",
           onPress: async () => {
             await resetApplicationData();
             setThemeName("system");
             await hydratePreferences();
             Alert.alert(
-              "Aplicación reiniciada",
-              "La configuración volvió a su estado inicial.",
+              strings.settings.appResetTitle,
+              strings.settings.appResetMessage,
             );
           },
         },
@@ -207,14 +209,15 @@ export default function SettingsScreen() {
   }, [hydratePreferences, setThemeName]);
 
   return (
-    <AppScreen scrollable>
+    <AppScreen scrollable stickyHeader={<AppHeader hideSettingsAction />}>
       <View style={styles.container}>
-        <AppHeader hideSettingsAction />
-
-        <AppCard title="Tema de la aplicación" variant="elevated" showTopAccent>
-          <AppText variant="body" tone="secondary">
-            El cambio se guarda automáticamente y se mantiene al volver a abrir
-            la app.
+        <AppCard
+          title={strings.settings.appThemeTitle}
+          variant="elevated"
+          showTopAccent
+        >
+          <AppText variant="bodySecondary">
+            {strings.settings.appThemeDescription}
           </AppText>
 
           <View style={styles.optionsList}>
@@ -260,13 +263,16 @@ export default function SettingsScreen() {
           </View>
         </AppCard>
 
-        <AppCard title="Configuración académica" variant="elevated">
+        <AppCard
+          title={strings.settings.academicConfigTitle}
+          variant="elevated"
+        >
           <AppInput
-            label="Nota mínima global"
+            label={strings.settings.globalMinLabel}
             value={minimumGradeInput}
             onChangeText={setMinimumGradeInput}
             keyboardType="decimal-pad"
-            placeholder="Ej: 4.0"
+            placeholder={strings.settings.globalMinPlaceholder}
             error={minimumGradeError}
           />
 
@@ -291,7 +297,7 @@ export default function SettingsScreen() {
                   <View style={styles.optionTitleRow}>
                     <AppText variant="h3">{scale.label}</AppText>
                     {isSelected ? (
-                      <AppBadge label="Activo" tone="info" />
+                      <AppBadge label={strings.settings.active} tone="info" />
                     ) : null}
                   </View>
                   <AppText variant="caption" tone="secondary">
@@ -303,19 +309,23 @@ export default function SettingsScreen() {
           </View>
 
           <AppButton
-            label={isSavingAcademic ? "Guardando..." : "Guardar"}
+            label={
+              isSavingAcademic ? strings.settings.saving : strings.common.save
+            }
             onPress={() => void handleSaveAcademicSettings()}
             disabled={isSavingAcademic}
           />
         </AppCard>
 
-        <AppCard title="Comportamiento" variant="glass">
+        <AppCard title={strings.settings.behaviorTitle} variant="glass">
           <View style={styles.switchList}>
             <View style={styles.switchRow}>
               <View style={styles.switchCopy}>
-                <AppText variant="h3">Consejos académicos</AppText>
+                <AppText variant="h3">
+                  {strings.settings.academicAdviceTitle}
+                </AppText>
                 <AppText variant="caption" tone="secondary">
-                  Muestra recomendaciones automáticas según tu estado actual.
+                  {strings.settings.academicAdviceDescription}
                 </AppText>
               </View>
               <Switch
@@ -330,9 +340,11 @@ export default function SettingsScreen() {
 
             <View style={styles.switchRow}>
               <View style={styles.switchCopy}>
-                <AppText variant="h3">Alertas de riesgo</AppText>
+                <AppText variant="h3">
+                  {strings.settings.riskAlertsTitle}
+                </AppText>
                 <AppText variant="caption" tone="secondary">
-                  Activa notificaciones visuales cuando haya ramos críticos.
+                  {strings.settings.riskAlertsDescription}
                 </AppText>
               </View>
               <Switch
@@ -347,9 +359,11 @@ export default function SettingsScreen() {
 
             <View style={styles.switchRow}>
               <View style={styles.switchCopy}>
-                <AppText variant="h3">Animaciones</AppText>
+                <AppText variant="h3">
+                  {strings.settings.animationsTitle}
+                </AppText>
                 <AppText variant="caption" tone="secondary">
-                  Habilita transiciones y microanimaciones de la interfaz.
+                  {strings.settings.animationsDescription}
                 </AppText>
               </View>
               <Switch
@@ -364,20 +378,24 @@ export default function SettingsScreen() {
           </View>
         </AppCard>
 
-        <AppCard title="Datos" variant="accent" accentTone="warm">
+        <AppCard
+          title={strings.settings.dataTitle}
+          variant="accent"
+          accentTone="warm"
+        >
           <AppText variant="caption" tone="secondary">
-            Estas acciones son locales y no requieren conexión a internet.
+            {strings.settings.dataDescription}
           </AppText>
 
           <View style={styles.actionsRow}>
             <AppButton
-              label="Eliminar ramos"
+              label={strings.settings.deleteSubjects}
               variant="outline"
               onPress={handleDeleteAllSubjects}
               style={styles.actionButton}
             />
             <AppButton
-              label="Reiniciar app"
+              label={strings.settings.resetApp}
               variant="outline"
               onPress={handleResetApplication}
               style={styles.actionButton}
@@ -385,22 +403,35 @@ export default function SettingsScreen() {
           </View>
         </AppCard>
 
-        <AppCard title="Información" variant="glass">
+        <AppCard title={strings.settings.infoTitle} variant="glass">
           <View style={styles.infoRow}>
             <AppText variant="caption" tone="secondary">
-              Proyecto
+              {strings.settings.project}
             </AppText>
             <AppText variant="bodyStrong">{projectName}</AppText>
           </View>
           <View style={styles.infoRow}>
             <AppText variant="caption" tone="secondary">
-              Versión
+              {strings.settings.version}
             </AppText>
             <AppText variant="bodyStrong">{appVersion}</AppText>
           </View>
+          <View style={styles.infoRow}>
+            <AppText variant="caption" tone="secondary">
+              {strings.settings.developedBy}
+            </AppText>
+            <AppText variant="bodyStrong">
+              {strings.settings.developedByValue}
+            </AppText>
+          </View>
+          <View style={styles.infoRow}>
+            <AppText variant="caption" tone="secondary">
+              {strings.settings.github}
+            </AppText>
+            <AppText variant="bodyStrong">{strings.settings.githubValue}</AppText>
+          </View>
           <AppText variant="caption" tone="secondary">
-            Panel de configuración local para pruebas académicas y ajustes de
-            experiencia.
+            {strings.settings.infoDescription}
           </AppText>
         </AppCard>
       </View>
@@ -410,7 +441,7 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.xl,
+    gap: spacing.lg,
   },
   optionsList: {
     gap: spacing.sm,

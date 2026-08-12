@@ -3,6 +3,7 @@ import React from "react";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { strings } from "@/src/constants/strings";
 import { useAppTheme } from "@/src/theme";
 
 export default function TabLayout() {
@@ -30,7 +31,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Inicio",
+          title: strings.tabs.home,
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="house.fill" color={color} />
           ),
@@ -39,7 +40,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="calculator/quick"
         options={{
-          title: "Calcular",
+          title: strings.tabs.calculate,
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="function" color={color} />
           ),
@@ -48,7 +49,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="subjects"
         options={{
-          title: "Ramos",
+          title: strings.tabs.subjects,
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="book.fill" color={color} />
           ),
@@ -57,7 +58,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="simulator"
         options={{
-          title: "Simular",
+          title: strings.tabs.simulate,
           tabBarIcon: ({ color }) => (
             <IconSymbol
               size={28}
@@ -70,7 +71,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Config.",
+          title: strings.tabs.settings,
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="gearshape.fill" color={color} />
           ),

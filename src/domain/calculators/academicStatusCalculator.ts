@@ -35,13 +35,13 @@ export function getAcademicStatus({
     return "notAchievable";
   }
 
-  if (requiredGrade < MIN_GRADE) {
+  if (requiredGrade <= 4.0) {
     return "favorable";
   }
 
-  if (requiredGrade >= 6.0 && requiredGrade <= MAX_GRADE) {
-    return "atRisk";
+  if (requiredGrade <= 5.0) {
+    return "achievable";
   }
 
-  return "achievable";
+  return "atRisk";
 }

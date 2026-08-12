@@ -1,4 +1,10 @@
 import type { ThemePreference } from "../domain/entities";
+import {
+    ACADEMIC_CALCULATION_PROFILES,
+    CHILE_1_7_GRADE_SCALE,
+    DEFAULT_ACADEMIC_SETTINGS_TEMPLATE,
+} from "../domain/rules";
+import type { AcademicSettingsTemplate, GradeScale } from "../domain/types";
 import { initializeDatabase } from "./database/migrations";
 import { getDatabase } from "./database/sqliteClient";
 
@@ -8,6 +14,7 @@ const GRADING_SCALE_KEY = "gradingScale";
 const SHOW_ACADEMIC_ADVICE_KEY = "showAcademicAdvice";
 const SHOW_RISK_ALERTS_KEY = "showRiskAlerts";
 const ENABLE_ANIMATIONS_KEY = "enableAnimations";
+const ACADEMIC_SETTINGS_TEMPLATE_KEY = "academicSettingsTemplate";
 
 export type GradingScale = "1.0-7.0";
 
@@ -53,6 +60,123 @@ function toBoolean(value: string | undefined, fallback: boolean): boolean {
   }
 
   return fallback;
+}
+
+function isGradeScale(value: unknown): value is GradeScale {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<GradeScale>;
+
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.name === "string" &&
+    typeof candidate.minGrade === "number" &&
+    typeof candidate.maxGrade === "number" &&
+    typeof candidate.defaultPassingGrade === "number" &&
+    typeof candidate.decimalPrecision === "number"
+  );
+}
+
+function isAcademicSettingsTemplate(
+  value: unknown,
+): value is AcademicSettingsTemplate {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<AcademicSettingsTemplate>;
+
+  const hasValidProfileId =
+    typeof candidate.defaultProfileId === "string" &&
+    candidate.defaultProfileId in ACADEMIC_CALCULATION_PROFILES;
+
+  return (
+    hasValidProfileId &&
+    typeof candidate.templateVersion === "number" &&
+    typeof candidate.updatedAt === "string" &&
+    typeof candidate.defaultPassingGrade === "number" &&
+    isGradeScale(candidate.defaultGradeScale)
+  );
+}
+
+function normalizeLegacyGradeScale(value: string | null): GradeScale | null {
+  if (value === "1.0-7.0") {
+    return CHILE_1_7_GRADE_SCALE;
+  }
+
+  return null;
+}
+
+function resolveLegacyPassingGrade(value: string | null): number | null {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed < 1 || parsed > 7) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function getTemplateWithLegacyFallback(
+  legacyPassingGrade: string | null,
+  legacyGradingScale: string | null,
+): AcademicSettingsTemplate {
+  const legacyScale = normalizeLegacyGradeScale(legacyGradingScale);
+  const gradeScale =
+    legacyScale ?? DEFAULT_ACADEMIC_SETTINGS_TEMPLATE.defaultGradeScale;
+  const fallbackPassingGrade = resolveLegacyPassingGrade(legacyPassingGrade);
+  const normalizedPassingGrade =
+    fallbackPassingGrade !== null
+      ? Math.min(
+          Math.max(fallbackPassingGrade, gradeScale.minGrade),
+          gradeScale.maxGrade,
+        )
+      : gradeScale.defaultPassingGrade;
+
+  return {
+    ...DEFAULT_ACADEMIC_SETTINGS_TEMPLATE,
+    defaultCountryCode:
+      gradeScale.countryCode ??
+      DEFAULT_ACADEMIC_SETTINGS_TEMPLATE.defaultCountryCode,
+    defaultGradeScale: gradeScale,
+    defaultPassingGrade: normalizedPassingGrade,
+  };
+}
+
+function normalizeTemplate(
+  value: unknown,
+  legacyPassingGrade: string | null,
+  legacyGradingScale: string | null,
+): AcademicSettingsTemplate {
+  const fallbackTemplate = getTemplateWithLegacyFallback(
+    legacyPassingGrade,
+    legacyGradingScale,
+  );
+
+  if (!isAcademicSettingsTemplate(value)) {
+    return fallbackTemplate;
+  }
+
+  const candidate = value;
+
+  const boundedPassingGrade = Math.min(
+    Math.max(
+      candidate.defaultPassingGrade,
+      candidate.defaultGradeScale.minGrade,
+    ),
+    candidate.defaultGradeScale.maxGrade,
+  );
+
+  return {
+    defaultCountryCode: candidate.defaultCountryCode,
+    defaultGradeScale: candidate.defaultGradeScale,
+    defaultPassingGrade: boundedPassingGrade,
+    defaultProfileId: candidate.defaultProfileId,
+    templateVersion: candidate.templateVersion,
+    updatedAt: candidate.updatedAt,
+  };
 }
 
 async function getSettingValue(key: string): Promise<string | null> {
@@ -139,6 +263,50 @@ export async function getAppPreferences(): Promise<AppPreferences> {
   };
 }
 
+export async function getAcademicSettingsTemplate(): Promise<AcademicSettingsTemplate> {
+  const [templateValue, legacyPassingGrade, legacyGradingScale] =
+    await Promise.all([
+      getSettingValue(ACADEMIC_SETTINGS_TEMPLATE_KEY),
+      getSettingValue(GLOBAL_PASSING_GRADE_KEY),
+      getSettingValue(GRADING_SCALE_KEY),
+    ]);
+
+  if (!templateValue) {
+    return getTemplateWithLegacyFallback(
+      legacyPassingGrade,
+      legacyGradingScale,
+    );
+  }
+
+  try {
+    const parsedTemplate = JSON.parse(templateValue) as unknown;
+    return normalizeTemplate(
+      parsedTemplate,
+      legacyPassingGrade,
+      legacyGradingScale,
+    );
+  } catch {
+    return getTemplateWithLegacyFallback(
+      legacyPassingGrade,
+      legacyGradingScale,
+    );
+  }
+}
+
+export async function saveAcademicSettingsTemplate(
+  template: AcademicSettingsTemplate,
+): Promise<void> {
+  const normalizedTemplate = normalizeTemplate(template, null, null);
+  await saveSettingValue(
+    ACADEMIC_SETTINGS_TEMPLATE_KEY,
+    JSON.stringify(normalizedTemplate),
+  );
+}
+
+export async function resetAcademicSettingsTemplate(): Promise<void> {
+  await saveAcademicSettingsTemplate(DEFAULT_ACADEMIC_SETTINGS_TEMPLATE);
+}
+
 export async function saveAcademicSettings(
   settings: AcademicSettings,
 ): Promise<void> {
@@ -149,6 +317,20 @@ export async function saveAcademicSettings(
     ),
     saveSettingValue(GRADING_SCALE_KEY, settings.gradingScale),
   ]);
+
+  const currentTemplate = await getAcademicSettingsTemplate();
+  const nextScale =
+    normalizeLegacyGradeScale(settings.gradingScale) ??
+    currentTemplate.defaultGradeScale;
+
+  await saveAcademicSettingsTemplate({
+    ...currentTemplate,
+    defaultCountryCode:
+      nextScale.countryCode ?? currentTemplate.defaultCountryCode,
+    defaultGradeScale: nextScale,
+    defaultPassingGrade: settings.globalPassingGrade,
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 export async function saveBehaviorSettings(

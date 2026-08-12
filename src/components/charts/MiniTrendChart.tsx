@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 
 import { useAppTheme } from "@/src/theme";
@@ -15,15 +15,27 @@ export function MiniTrendChart({
   duration = 800,
 }: MiniTrendChartProps) {
   const { theme } = useAppTheme();
-  const safePoints = points.length > 0 ? points : [10, 18, 24, 30, 22];
-  const animatedValues = useRef(
-    safePoints.map(() => new Animated.Value(0)),
-  ).current;
+  const safePoints = useMemo(
+    () => points.map((point) => Math.max(0, Math.min(100, point))),
+    [points],
+  );
+  const animatedValuesRef = useRef<Animated.Value[]>([]);
+
+  // Keep one Animated.Value per point available before render.
+  if (animatedValuesRef.current.length !== safePoints.length) {
+    animatedValuesRef.current = safePoints.map(
+      (_, index) => animatedValuesRef.current[index] ?? new Animated.Value(0),
+    );
+  }
 
   useEffect(() => {
+    if (safePoints.length === 0) {
+      return;
+    }
+
     const animations = safePoints.map((point, index) =>
-      Animated.timing(animatedValues[index], {
-        toValue: Math.max(0, Math.min(100, point)),
+      Animated.timing(animatedValuesRef.current[index], {
+        toValue: point,
         duration,
         delay: index * 70,
         useNativeDriver: false,
@@ -31,12 +43,16 @@ export function MiniTrendChart({
     );
 
     Animated.parallel(animations).start();
-  }, [animatedValues, duration, safePoints]);
+  }, [duration, safePoints]);
+
+  if (safePoints.length === 0) {
+    return null;
+  }
 
   return (
     <View style={[styles.row, { height }]}>
       {safePoints.map((_, index) => {
-        const barHeight = animatedValues[index].interpolate({
+        const barHeight = animatedValuesRef.current[index].interpolate({
           inputRange: [0, 100],
           outputRange: [4, height],
         });

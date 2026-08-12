@@ -9,7 +9,9 @@ import {
     AppScreen,
     AppText,
 } from "@/src/components/ui";
+import { strings } from "@/src/constants/strings";
 import { MAX_GRADE, MIN_GRADE } from "@/src/domain/rules";
+import { parseAcademicNumber } from "@/src/domain/utils/parseAcademicNumber";
 import { addEvaluation } from "@/src/features/subjects/services/evaluationService";
 import { getSubjects } from "@/src/features/subjects/services/subjectService";
 import { spacing } from "@/src/theme";
@@ -38,29 +40,22 @@ export default function CreateEvaluationScreen() {
     };
   }, [params.id]);
 
-  const parseDecimal = (value: string): number | null => {
-    const normalized = value.replace(",", ".").trim();
-    if (!normalized) return null;
-    const parsed = Number(normalized);
-    return Number.isNaN(parsed) ? null : parsed;
-  };
-
   const handleSave = async () => {
     const trimmedName = name.trim();
-    const parsedWeight = parseDecimal(weight);
-    const parsedGrade = grade.trim() ? parseDecimal(grade) : null;
+    const parsedWeight = parseAcademicNumber(weight);
+    const parsedGrade = grade.trim() ? parseAcademicNumber(grade) : null;
 
     let hasError = false;
 
     if (!trimmedName) {
-      setNameError("El nombre de la evaluación es obligatorio.");
+      setNameError(strings.createEvaluation.nameRequired);
       hasError = true;
     } else {
       setNameError(undefined);
     }
 
     if (parsedWeight === null || parsedWeight <= 0 || parsedWeight > 100) {
-      setWeightError("La ponderación debe estar entre 1 y 100.");
+      setWeightError(strings.createEvaluation.weightRangeError);
       hasError = true;
     } else {
       setWeightError(undefined);
@@ -72,7 +67,9 @@ export default function CreateEvaluationScreen() {
         parsedGrade < MIN_GRADE ||
         parsedGrade > MAX_GRADE)
     ) {
-      setGradeError(`La nota debe estar entre ${MIN_GRADE} y ${MAX_GRADE}.`);
+      setGradeError(
+        strings.createEvaluation.gradeRangeError(MIN_GRADE, MAX_GRADE),
+      );
       hasError = true;
     } else {
       setGradeError(undefined);
@@ -97,36 +94,37 @@ export default function CreateEvaluationScreen() {
 
   return (
     <AppScreen scrollable>
-      <Stack.Screen options={{ title: "Agregar evaluación" }} />
+      <Stack.Screen options={{ title: strings.createEvaluation.stackTitle }} />
       <View style={styles.container}>
         <View style={styles.headerSection}>
-          <AppText variant="title">Agregar evaluación</AppText>
+          <AppText variant="title">
+            {strings.createEvaluation.headerTitle}
+          </AppText>
           <AppText tone="secondary">
-            Registra una evaluación para este ramo. La nota puede quedar
-            pendiente si aún no la tienes.
+            {strings.createEvaluation.headerDescription}
           </AppText>
         </View>
 
-        <AppCard title="Datos de la evaluación">
+        <AppCard title={strings.createEvaluation.dataTitle}>
           <AppInput
-            label="Nombre"
+            label={strings.createEvaluation.nameLabel}
             value={name}
             onChangeText={setName}
-            placeholder="Ej: Prueba 1"
+            placeholder={strings.createEvaluation.namePlaceholder}
             error={nameError}
           />
 
           <AppInput
-            label="Ponderación (%)"
+            label={strings.createEvaluation.weightLabel}
             value={weight}
             onChangeText={setWeight}
-            placeholder="Ej: 30"
+            placeholder={strings.createEvaluation.weightPlaceholder}
             keyboardType="decimal-pad"
             error={weightError}
           />
 
           <AppInput
-            label="Nota (dejar vacío si es pendiente)"
+            label={strings.createEvaluation.gradeLabel}
             value={grade}
             onChangeText={setGrade}
             placeholder=""
@@ -136,23 +134,26 @@ export default function CreateEvaluationScreen() {
         </AppCard>
 
         <AppCard
-          title="¿La nota es pendiente?"
+          title={strings.createEvaluation.pendingTitle}
           style={{ backgroundColor: undefined }}
         >
           <AppText tone="secondary">
-            Si aún no tienes la nota, deja el campo vacío. Podrás editarla
-            después desde el detalle del ramo.
+            {strings.createEvaluation.pendingDescription}
           </AppText>
         </AppCard>
 
         <View style={styles.actionsRow}>
           <AppButton
-            label={saving ? "Guardando…" : "Guardar evaluación"}
+            label={
+              saving
+                ? strings.createEvaluation.saving
+                : strings.createEvaluation.saveEvaluation
+            }
             style={styles.actionButton}
             onPress={handleSave}
           />
           <AppButton
-            label="Cancelar"
+            label={strings.common.cancel}
             variant="outline"
             style={styles.actionButton}
             onPress={() => router.back()}

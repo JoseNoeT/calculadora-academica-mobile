@@ -1,7 +1,11 @@
+import type { AcademicBlockType } from "../../../domain/types";
+
 export interface EvaluationListItem {
   id: string;
   subjectId: string;
   name: string;
+  category?: AcademicBlockType;
+  blockId?: string;
   weight: number;
   grade: number | null;
   minimumGrade: number;
@@ -13,6 +17,8 @@ export interface EvaluationListItem {
 export interface CreateEvaluationInput {
   subjectId: string;
   name: string;
+  category?: AcademicBlockType;
+  blockId?: string;
   weight: number;
   grade: number | null;
   minimumGrade: number;
@@ -20,6 +26,8 @@ export interface CreateEvaluationInput {
 
 export interface UpdateEvaluationInput {
   name: string;
+  category?: AcademicBlockType;
+  blockId?: string;
   weight: number;
   grade: number | null;
 }

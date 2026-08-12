@@ -1,7 +1,8 @@
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import { Stack, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
+import { AppScreenHeader } from "@/src/components/layout/AppScreenHeader";
 import {
     AppButton,
     AppCard,
@@ -9,23 +10,25 @@ import {
     AppScreen,
     AppText,
 } from "@/src/components/ui";
-import { MAX_GRADE, MIN_GRADE } from "@/src/domain/rules";
-import { createSubject } from "@/src/features/subjects/services/subjectService";
+import { strings } from "@/src/constants/strings";
+import type { AcademicProfileId } from "@/src/domain/types";
+import {
+  ACADEMIC_CALCULATION_PROFILES,
+  MAX_GRADE,
+  MIN_GRADE,
+} from "@/src/domain/rules";
+import { parseAcademicNumber } from "@/src/domain/utils/parseAcademicNumber";
+import {
+    createSubject,
+  getDefaultAcademicProfileId,
+    getSubjects,
+} from "@/src/features/subjects/services/subjectService";
 import { spacing, useAppTheme } from "@/src/theme";
-
-type SubjectColorOption = {
-  id: string;
-  name: string;
-  value: string;
-};
-
-const COLOR_OPTIONS: SubjectColorOption[] = [
-  { id: "blue", name: "Azul", value: "#2563EB" },
-  { id: "cyan", name: "Cian", value: "#06B6D4" },
-  { id: "emerald", name: "Verde", value: "#10B981" },
-  { id: "amber", name: "Amarillo", value: "#F59E0B" },
-  { id: "rose", name: "Rosado", value: "#F43F5E" },
-];
+import {
+    assignSubjectColor,
+    getSubjectColorById,
+    SUBJECT_COLORS,
+} from "@/src/theme/subjectColors";
 
 export default function CreateSubjectScreen() {
   const router = useRouter();
@@ -33,37 +36,53 @@ export default function CreateSubjectScreen() {
 
   const [subjectName, setSubjectName] = useState("");
   const [passingGrade, setPassingGrade] = useState("4.0");
-  const [selectedColorId, setSelectedColorId] = useState("blue");
+  const [selectedColorId, setSelectedColorId] = useState(SUBJECT_COLORS[0].id);
+  const [selectedAcademicProfileId, setSelectedAcademicProfileId] =
+    useState<AcademicProfileId>("weighted_general");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | undefined>(undefined);
   const [passingGradeError, setPassingGradeError] = useState<
     string | undefined
   >(undefined);
 
-  const selectedColor =
-    COLOR_OPTIONS.find((option) => option.id === selectedColorId) ??
-    COLOR_OPTIONS[0];
+  useEffect(() => {
+    const initDefaultColor = async () => {
+      const [subjects, defaultAcademicProfileId] = await Promise.all([
+        getSubjects(),
+        getDefaultAcademicProfileId(),
+      ]);
+      const usedColorValues = subjects.map((s) => s.color);
+      const defaultColor = assignSubjectColor(usedColorValues);
+      setSelectedColorId(defaultColor.id);
+      setSelectedAcademicProfileId(defaultAcademicProfileId);
+    };
+    void initDefaultColor();
+  }, []);
+
+  const selectedColor = getSubjectColorById(selectedColorId);
+  const selectedAcademicProfileLabel =
+    ACADEMIC_CALCULATION_PROFILES[selectedAcademicProfileId].name;
 
   const handleSave = async () => {
     const normalizedName = subjectName.trim();
-    const parsedMinimumGrade = Number(passingGrade.replace(",", ".").trim());
+    const parsedMinimumGrade = parseAcademicNumber(passingGrade);
 
     let hasError = false;
 
     if (!normalizedName) {
-      setNameError("El nombre del ramo es obligatorio.");
+      setNameError(strings.createSubject.nameRequired);
       hasError = true;
     } else {
       setNameError(undefined);
     }
 
     if (
-      Number.isNaN(parsedMinimumGrade) ||
+      parsedMinimumGrade === null ||
       parsedMinimumGrade < MIN_GRADE ||
       parsedMinimumGrade > MAX_GRADE
     ) {
       setPassingGradeError(
-        `La nota mínima debe estar entre ${MIN_GRADE} y ${MAX_GRADE}.`,
+        strings.createSubject.gradeRangeError(MIN_GRADE, MAX_GRADE),
       );
       hasError = true;
     } else {
@@ -78,95 +97,128 @@ export default function CreateSubjectScreen() {
     try {
       await createSubject({
         name: normalizedName,
-        minimumGrade: parsedMinimumGrade,
-        color: selectedColor.value,
+        minimumGrade: parsedMinimumGrade!,
+        color: selectedColor.background,
+        academicProfileId: selectedAcademicProfileId,
       });
 
-      setSaveMessage("Ramo guardado localmente en el dispositivo.");
+      setSaveMessage(strings.createSubject.savedMessage);
       router.back();
     } catch (error) {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "No se pudo guardar el ramo localmente.";
+          : strings.createSubject.saveFailedMessage;
       setSaveMessage(errorMessage);
     }
   };
 
   return (
-    <AppScreen scrollable>
+    <AppScreen
+      scrollable
+      stickyHeader={<AppScreenHeader backLabel="Ramos" />}
+    >
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.container}>
         <View style={styles.headerSection}>
-          <AppText variant="title">Agregar ramo</AppText>
+          <AppText variant="title">{strings.createSubject.headerTitle}</AppText>
           <AppText tone="secondary">
-            Configura una asignatura para controlar tus notas durante el
-            semestre.
+            {strings.createSubject.headerDescription}
           </AppText>
         </View>
 
-        <AppCard title="Datos del ramo">
+        <AppCard title={strings.createSubject.subjectDataTitle}>
           <AppInput
-            label="Nombre del ramo"
+            label={strings.createSubject.subjectNameLabel}
             value={subjectName}
             onChangeText={setSubjectName}
-            placeholder="Ej: Matemáticas I"
+            placeholder={strings.createSubject.subjectNamePlaceholder}
             error={nameError}
           />
 
           <AppInput
-            label="Nota mínima de aprobación"
+            label={strings.createSubject.passingGradeLabel}
             value={passingGrade}
             onChangeText={setPassingGrade}
-            placeholder="4.0"
+            placeholder={strings.createSubject.passingGradePlaceholder}
             keyboardType="decimal-pad"
             error={passingGradeError}
           />
 
+          <View
+            style={[
+              styles.academicSystemSection,
+              {
+                borderColor: theme.border,
+                backgroundColor: theme.surface,
+              },
+            ]}
+          >
+            <AppText variant="caption" tone="secondary">
+              {strings.createSubject.academicSystemTitle}
+            </AppText>
+            <AppText variant="h3">{selectedAcademicProfileLabel}</AppText>
+            <AppText variant="caption" tone="secondary">
+              {strings.createSubject.academicSystemDescription}
+            </AppText>
+          </View>
+
           <View style={styles.colorSection}>
-            <AppText variant="caption">Color identificador del ramo</AppText>
-            <View style={styles.colorRow}>
-              {COLOR_OPTIONS.map((option) => {
-                const isSelected = option.id === selectedColorId;
+            <AppText variant="caption">
+              {strings.createSubject.colorIdentifier}
+            </AppText>
+            <View style={styles.colorGrid}>
+              {SUBJECT_COLORS.map((color) => {
+                const isSelected = color.id === selectedColorId;
 
                 return (
                   <Pressable
-                    key={option.id}
-                    onPress={() => setSelectedColorId(option.id)}
+                    key={color.id}
+                    onPress={() => setSelectedColorId(color.id)}
+                    accessibilityLabel={color.name}
                     style={[
-                      styles.colorOption,
-                      {
-                        borderColor: isSelected ? theme.primary : theme.border,
-                        backgroundColor: theme.surface,
+                      styles.colorSwatch,
+                      { backgroundColor: color.background },
+                      isSelected && {
+                        borderWidth: 3,
+                        borderColor: color.textOnColor,
                       },
                     ]}
                   >
-                    <View
-                      style={[
-                        styles.colorDot,
-                        { backgroundColor: option.value },
-                      ]}
-                    />
-                    <AppText
-                      variant="caption"
-                      tone={isSelected ? "primary" : "secondary"}
-                    >
-                      {option.name}
-                    </AppText>
+                    {isSelected ? (
+                      <AppText
+                        style={[
+                          styles.colorSwatchCheck,
+                          { color: color.textOnColor },
+                        ]}
+                      >
+                        ✓
+                      </AppText>
+                    ) : null}
                   </Pressable>
                 );
               })}
+            </View>
+            <View style={styles.colorPreview}>
+              <View
+                style={[
+                  styles.colorPreviewDot,
+                  { backgroundColor: selectedColor.background },
+                ]}
+              />
+              <AppText variant="caption" tone="secondary">
+                {selectedColor.name}
+              </AppText>
             </View>
           </View>
         </AppCard>
 
         <AppCard
-          title="¿Por qué crear un ramo?"
+          title={strings.createSubject.whyCreateTitle}
           style={{ backgroundColor: theme.surfaceElevated }}
         >
           <AppText tone="secondary">
-            Al crear un ramo podrás agregar evaluaciones, registrar notas
-            pendientes, revisar tu avance y calcular la nota necesaria para
-            aprobar.
+            {strings.createSubject.whyCreateDescription}
           </AppText>
         </AppCard>
 
@@ -178,12 +230,12 @@ export default function CreateSubjectScreen() {
 
         <View style={styles.actionsRow}>
           <AppButton
-            label="Guardar ramo"
+            label={strings.createSubject.saveSubject}
             style={styles.actionButton}
             onPress={handleSave}
           />
           <AppButton
-            label="Cancelar"
+            label={strings.common.cancel}
             variant="outline"
             style={styles.actionButton}
             onPress={() => router.back()}
@@ -206,24 +258,36 @@ const styles = StyleSheet.create({
   colorSection: {
     gap: spacing.sm,
   },
-  colorRow: {
+  academicSystemSection: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  colorGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
   },
-  colorOption: {
-    minWidth: 88,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
+  colorSwatch: {
+    width: 44,
+    height: 44,
+    borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
+  },
+  colorSwatchCheck: {
+    fontSize: 18,
+    lineHeight: 22,
+  },
+  colorPreview: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
   },
-  colorDot: {
-    width: 16,
-    height: 16,
+  colorPreviewDot: {
+    width: 12,
+    height: 12,
     borderRadius: 999,
   },
   actionsRow: {

@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import {
@@ -9,26 +9,19 @@ import {
     AppScreen,
     AppText,
 } from "@/src/components/ui";
+import { strings } from "@/src/constants/strings";
 import { MAX_GRADE, MIN_GRADE } from "@/src/domain/rules";
+import { parseAcademicNumber } from "@/src/domain/utils/parseAcademicNumber";
 import {
     getSubjectById,
     updateSubject,
 } from "@/src/features/subjects/services/subjectService";
 import { spacing, useAppTheme } from "@/src/theme";
-
-type SubjectColorOption = {
-  id: string;
-  name: string;
-  value: string;
-};
-
-const COLOR_OPTIONS: SubjectColorOption[] = [
-  { id: "blue", name: "Azul", value: "#2563EB" },
-  { id: "cyan", name: "Cian", value: "#06B6D4" },
-  { id: "emerald", name: "Verde", value: "#10B981" },
-  { id: "amber", name: "Amarillo", value: "#F59E0B" },
-  { id: "rose", name: "Rosado", value: "#F43F5E" },
-];
+import {
+    getSubjectColorById,
+    getSubjectColorByValue,
+    SUBJECT_COLORS,
+} from "@/src/theme/subjectColors";
 
 export default function EditSubjectScreen() {
   const { theme } = useAppTheme();
@@ -41,9 +34,7 @@ export default function EditSubjectScreen() {
 
   const [subjectName, setSubjectName] = useState("");
   const [minimumGradeInput, setMinimumGradeInput] = useState("");
-  const [selectedColorValue, setSelectedColorValue] = useState(
-    COLOR_OPTIONS[0].value,
-  );
+  const [selectedColorId, setSelectedColorId] = useState(SUBJECT_COLORS[0].id);
 
   const [nameError, setNameError] = useState<string | undefined>(undefined);
   const [minimumGradeError, setMinimumGradeError] = useState<
@@ -65,20 +56,21 @@ export default function EditSubjectScreen() {
         }
 
         if (!subject) {
-          setLoadError("El ramo no existe o fue eliminado.");
+          setLoadError(strings.editSubject.missingSubject);
           setIsLoading(false);
           return;
         }
 
         setSubjectName(subject.name);
         setMinimumGradeInput(subject.minimumGrade.toFixed(1));
-        setSelectedColorValue(subject.color);
+        const foundColor = getSubjectColorByValue(subject.color);
+        setSelectedColorId(foundColor?.id ?? SUBJECT_COLORS[0].id);
         setIsLoading(false);
       } catch {
         if (!isMounted) {
           return;
         }
-        setLoadError("No se pudo cargar el ramo.");
+        setLoadError(strings.editSubject.loadFailed);
         setIsLoading(false);
       }
     };
@@ -90,33 +82,26 @@ export default function EditSubjectScreen() {
     };
   }, [params.id]);
 
-  const selectedColorId = useMemo(() => {
-    return COLOR_OPTIONS.find((option) => option.value === selectedColorValue)
-      ?.id;
-  }, [selectedColorValue]);
-
   const handleSave = async () => {
     const normalizedName = subjectName.trim();
-    const parsedMinimumGrade = Number(
-      minimumGradeInput.replace(",", ".").trim(),
-    );
+    const parsedMinimumGrade = parseAcademicNumber(minimumGradeInput);
 
     let hasError = false;
 
     if (!normalizedName) {
-      setNameError("El nombre del ramo es obligatorio.");
+      setNameError(strings.editSubject.nameRequired);
       hasError = true;
     } else {
       setNameError(undefined);
     }
 
     if (
-      Number.isNaN(parsedMinimumGrade) ||
+      parsedMinimumGrade === null ||
       parsedMinimumGrade < MIN_GRADE ||
       parsedMinimumGrade > MAX_GRADE
     ) {
       setMinimumGradeError(
-        `La nota mínima debe estar entre ${MIN_GRADE} y ${MAX_GRADE}.`,
+        strings.editSubject.gradeRangeError(MIN_GRADE, MAX_GRADE),
       );
       hasError = true;
     } else {
@@ -134,34 +119,34 @@ export default function EditSubjectScreen() {
 
       await updateSubject(params.id, {
         name: normalizedName,
-        minimumGrade: parsedMinimumGrade,
-        color: selectedColorValue,
+        minimumGrade: parsedMinimumGrade!,
+        color: getSubjectColorById(selectedColorId).background,
       });
 
       router.back();
     } catch (error) {
       setIsSaving(false);
       setSaveError(
-        error instanceof Error
-          ? error.message
-          : "No se pudo guardar los cambios.",
+        error instanceof Error ? error.message : strings.editSubject.saveFailed,
       );
     }
   };
 
   return (
     <AppScreen scrollable>
-      <Stack.Screen options={{ title: "Editar ramo" }} />
+      <Stack.Screen options={{ title: strings.editSubject.stackTitle }} />
       <View style={styles.container}>
         {isLoading ? (
-          <AppCard title="Cargando ramo...">
-            <AppText tone="secondary">Espera un momento.</AppText>
+          <AppCard title={strings.editSubject.loadingTitle}>
+            <AppText tone="secondary">
+              {strings.editSubject.waitMessage}
+            </AppText>
           </AppCard>
         ) : loadError ? (
-          <AppCard title="No disponible">
+          <AppCard title={strings.editSubject.unavailableTitle}>
             <AppText tone="secondary">{loadError}</AppText>
             <AppButton
-              label="Volver"
+              label={strings.common.back}
               variant="outline"
               style={styles.backButton}
               onPress={() => router.back()}
@@ -170,67 +155,81 @@ export default function EditSubjectScreen() {
         ) : (
           <>
             <View style={styles.headerSection}>
-              <AppText variant="title">Editar ramo</AppText>
+              <AppText variant="title">
+                {strings.editSubject.headerTitle}
+              </AppText>
               <AppText tone="secondary">
-                Actualiza el nombre, nota mínima y color del ramo.
+                {strings.editSubject.headerDescription}
               </AppText>
             </View>
 
-            <AppCard title="Datos del ramo">
+            <AppCard title={strings.editSubject.dataTitle}>
               <AppInput
-                label="Nombre del ramo"
+                label={strings.editSubject.nameLabel}
                 value={subjectName}
                 onChangeText={setSubjectName}
-                placeholder="Ej: Matemáticas I"
+                placeholder={strings.editSubject.namePlaceholder}
                 error={nameError}
               />
 
               <AppInput
-                label="Nota mínima de aprobación"
+                label={strings.editSubject.minGradeLabel}
                 value={minimumGradeInput}
                 onChangeText={setMinimumGradeInput}
-                placeholder="4.0"
+                placeholder={strings.editSubject.minGradePlaceholder}
                 keyboardType="decimal-pad"
                 error={minimumGradeError}
               />
 
               <View style={styles.colorSection}>
                 <AppText variant="caption">
-                  Color identificador del ramo
+                  {strings.editSubject.colorIdentifier}
                 </AppText>
-                <View style={styles.colorRow}>
-                  {COLOR_OPTIONS.map((option) => {
-                    const isSelected = option.id === selectedColorId;
+                <View style={styles.colorGrid}>
+                  {SUBJECT_COLORS.map((color) => {
+                    const isSelected = color.id === selectedColorId;
 
                     return (
                       <Pressable
-                        key={option.id}
-                        onPress={() => setSelectedColorValue(option.value)}
+                        key={color.id}
+                        onPress={() => setSelectedColorId(color.id)}
+                        accessibilityLabel={color.name}
                         style={[
-                          styles.colorOption,
-                          {
-                            borderColor: isSelected
-                              ? theme.primary
-                              : theme.border,
-                            backgroundColor: theme.surface,
+                          styles.colorSwatch,
+                          { backgroundColor: color.background },
+                          isSelected && {
+                            borderWidth: 3,
+                            borderColor: color.textOnColor,
                           },
                         ]}
                       >
-                        <View
-                          style={[
-                            styles.colorDot,
-                            { backgroundColor: option.value },
-                          ]}
-                        />
-                        <AppText
-                          variant="caption"
-                          tone={isSelected ? "primary" : "secondary"}
-                        >
-                          {option.name}
-                        </AppText>
+                        {isSelected ? (
+                          <AppText
+                            style={[
+                              styles.colorSwatchCheck,
+                              { color: color.textOnColor },
+                            ]}
+                          >
+                            ✓
+                          </AppText>
+                        ) : null}
                       </Pressable>
                     );
                   })}
+                </View>
+                <View style={styles.colorPreview}>
+                  <View
+                    style={[
+                      styles.colorPreviewDot,
+                      {
+                        backgroundColor:
+                          getSubjectColorById(selectedColorId).background,
+                      },
+                    ]}
+                  />
+                  <AppText variant="caption" tone="secondary">
+                    {getSubjectColorById(selectedColorId).name}
+                  </AppText>
                 </View>
               </View>
             </AppCard>
@@ -243,12 +242,16 @@ export default function EditSubjectScreen() {
 
             <View style={styles.actionsRow}>
               <AppButton
-                label={isSaving ? "Guardando..." : "Guardar cambios"}
+                label={
+                  isSaving
+                    ? strings.editSubject.saving
+                    : strings.editSubject.saveChanges
+                }
                 style={styles.actionButton}
                 onPress={() => void handleSave()}
               />
               <AppButton
-                label="Cancelar"
+                label={strings.common.cancel}
                 variant="outline"
                 style={styles.actionButton}
                 onPress={() => router.back()}
@@ -273,24 +276,30 @@ const styles = StyleSheet.create({
   colorSection: {
     gap: spacing.sm,
   },
-  colorRow: {
+  colorGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
   },
-  colorOption: {
-    minWidth: 88,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
+  colorSwatch: {
+    width: 44,
+    height: 44,
+    borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
+  },
+  colorSwatchCheck: {
+    fontSize: 18,
+    lineHeight: 22,
+  },
+  colorPreview: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
   },
-  colorDot: {
-    width: 16,
-    height: 16,
+  colorPreviewDot: {
+    width: 12,
+    height: 12,
     borderRadius: 999,
   },
   actionsRow: {

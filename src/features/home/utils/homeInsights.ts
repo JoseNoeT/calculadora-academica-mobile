@@ -205,9 +205,8 @@ export function getNextActions(summary: HomeSummary): HomeNextAction[] {
   if (summary.pendingEvaluations > 0) {
     actions.push({
       id: "update-subjects",
-      title: "Ramos",
-      description:
-        "Registra tus evaluaciones pendientes para afinar el estado.",
+      title: "Registrar evaluaciones",
+      description: "Completa notas pendientes para afinar tu estado académico.",
       routeKey: "subjects",
     });
   }

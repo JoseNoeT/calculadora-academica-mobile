@@ -14,6 +14,8 @@ export interface AppTheme {
   surfaceElevated: string;
   textPrimary: string;
   textSecondary: string;
+  textMuted: string;
+  textAccent: string;
   border: string;
   primary: string;
   secondary: string;
